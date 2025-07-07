@@ -1,6 +1,9 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { checkProfileCompleted, requireAuth } from './guards'
+// Add these imports
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
@@ -61,6 +64,37 @@ import SupportView from '@/views/user/SupportView.vue' // Added import for Suppo
 import NotFound from '@/views/error/NotFound.vue'
 import Unauthorized from '@/views/error/Unauthorized.vue'
 import ServerError from '@/views/error/ServerError.vue'
+
+// Role mapping between numeric IDs and string roles
+const ROLE_MAP = {
+  1: 'superadmin',
+  2: 'tenant',
+  3: 'devotee',
+  4: 'volunteer'
+}
+
+// Add mapping from backend roles to frontend roles
+const BACKEND_ROLE_MAP = {
+  'templeadmin': 'tenant' // Map backend 'templeadmin' to frontend 'tenant'
+}
+
+// Helper function to get user role as string
+function getUserRole(user) {
+  if (!user) return null
+  
+  // If user already has string role
+  if (typeof user.role === 'string') {
+    // Check if we need to map from backend role to frontend role
+    return BACKEND_ROLE_MAP[user.role] || user.role
+  }
+  
+  // If user has numeric role_id
+  if (user.role_id !== undefined) {
+    return ROLE_MAP[user.role_id] || null
+  }
+  
+  return null
+}
 
 const routes = [
   // Public Routes
@@ -167,13 +201,14 @@ const routes = [
     }
   },
 
-  // Tenant Routes
+  // Tenant Routes - UPDATED to include templeadmin
   {
     path: '/tenant',
     component: DashboardLayout,
     meta: { 
       requiresAuth: true,
-      allowedRoles: ['tenant']
+      allowedRoles: ['tenant', 'templeadmin'],
+      roles: ['tenant', 'templeadmin']
     },
     children: [
       {
@@ -182,7 +217,9 @@ const routes = [
         component: TenantDashboard,
         meta: { 
           title: 'Tenant Dashboard',
-          breadcrumb: 'Dashboard'
+          breadcrumb: 'Dashboard',
+          allowedRoles: ['tenant', 'templeadmin'],
+          roles: ['tenant', 'templeadmin']
         }
       },
       {
@@ -191,7 +228,9 @@ const routes = [
         component: CreateTemple,
         meta: { 
           title: 'Create Temple',
-          breadcrumb: 'Create Temple'
+          breadcrumb: 'Create Temple',
+          allowedRoles: ['tenant', 'templeadmin'],
+          roles: ['tenant', 'templeadmin']
         }
       },
       {
@@ -200,7 +239,9 @@ const routes = [
         component: ManageTemples,
         meta: { 
           title: 'Manage Temples',
-          breadcrumb: 'Manage Temples'
+          breadcrumb: 'Manage Temples',
+          allowedRoles: ['tenant', 'templeadmin'],
+          roles: ['tenant', 'templeadmin']
         }
       },
       {
@@ -210,7 +251,9 @@ const routes = [
         props: true,  // Enable props passing
         meta: { 
           title: 'Temple Details',
-          breadcrumb: 'Temple Details'
+          breadcrumb: 'Temple Details',
+          allowedRoles: ['tenant', 'templeadmin'],
+          roles: ['tenant', 'templeadmin']
         }
       },
       {
@@ -220,20 +263,22 @@ const routes = [
         props: true,  // Enable props passing
         meta: { 
           title: 'Edit Temple',
-          breadcrumb: 'Edit Temple'
+          breadcrumb: 'Edit Temple',
+          allowedRoles: ['tenant', 'templeadmin'],
+          roles: ['tenant', 'templeadmin']
         }
       }
     ]
   },
 
-  // Entity (Temple Admin) Routes - Phase 5
+  // Entity (Temple Admin) Routes - Phase 5 - UPDATED to include templeadmin
   {
     path: '/entity/:id',
     component: DashboardLayout,
     props: true, // Enable props passing for the layout
     meta: { 
       requiresAuth: true,
-      allowedRoles: ['tenant', 'entity_admin']
+      allowedRoles: ['tenant', 'entity_admin', 'templeadmin']
     },
     children: [
       {
@@ -483,24 +528,24 @@ const routes = [
 
   // SuperAdmin Routes
   {
-    path: '/superadmin',
-    component: DashboardLayout,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['superadmin']
-    },
-    children: [
-      {
-        path: 'dashboard',
-        name: 'SuperAdminDashboard',
-        component: SuperAdminDashboard,
-        meta: { 
-          title: 'Super Admin Dashboard',
-          breadcrumb: 'Dashboard'
-        }
-      }
-    ]
+  path: '/superadmin',
+  component: DashboardLayout,
+  meta: { 
+    requiresAuth: true,
+    allowedRoles: ['superadmin', 'super_admin'] // Accept both formats
   },
+  children: [
+    {
+      path: 'dashboard',
+      name: 'SuperAdminDashboard',
+      component: SuperAdminDashboard,
+      meta: { 
+        title: 'Super Admin Dashboard',
+        breadcrumb: 'Dashboard'
+      }
+    }
+  ]
+},
 
   // Convenience Redirects
   {
@@ -545,7 +590,7 @@ const router = createRouter({
   }
 })
 
-// Route Guards (Basic implementation - enhance as needed)
+// Enhanced router guard with proper role-based access control
 router.beforeEach((to, from, next) => {
   // Set page title
   if (to.meta.title) {
@@ -554,8 +599,76 @@ router.beforeEach((to, from, next) => {
 
   // For debugging
   console.log('Navigating to:', to.path)
-
-  // For now, temporarily disable auth checks to test route access
+  
+  // Try to get auth store - need to wrap in try/catch to handle errors during initialization
+  try {
+    const authStore = useAuthStore()
+    
+    // Map templeadmin to tenant for route access
+    const userRole = authStore.userRole
+    const mappedRole = userRole === 'templeadmin' ? 'tenant' : userRole
+    
+    // CRITICAL: Special case for tenant users - force redirect to tenant dashboard
+    if (authStore.isAuthenticated && (mappedRole === 'tenant')) {
+      // If trying to access devotee routes, redirect to tenant dashboard
+      if (to.path.includes('/devotee/') || to.path.startsWith('/entity/') && to.path.includes('/devotee/')) {
+        console.warn('⚠️ Tenant user trying to access devotee routes - redirecting to tenant dashboard')
+        return next('/tenant/dashboard')
+      }
+    }
+    
+    // Handle root path for authenticated users
+    if (to.path === '/' && authStore.isAuthenticated) {
+      // Use mapped role for dashboard redirection
+      const dashboardRoute = authStore.dashboardRoute
+      console.log('Redirecting authenticated user to dashboard:', dashboardRoute)
+      return next(dashboardRoute)
+    }
+    
+    // Skip auth check if not required
+    if (!to.meta.requiresAuth) {
+      return next()
+    }
+    
+    // Check if user is authenticated for protected routes
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+      console.log('Authentication required, redirecting to login')
+      return next({ name: 'Login', query: { redirect: to.fullPath } })
+    }
+    
+    // Check role-based access - UPDATED to handle templeadmin
+    if (to.meta.allowedRoles && to.meta.allowedRoles.length > 0) {
+      // Special case for templeadmin trying to access tenant routes
+      if (userRole === 'templeadmin' && to.meta.allowedRoles.includes('tenant')) {
+        console.log('🔑 DEVELOPMENT: Allowing templeadmin access to tenant route')
+        return next()
+      }
+      
+      if (!to.meta.allowedRoles.includes(userRole) && !to.meta.allowedRoles.includes(mappedRole)) {
+        console.error(`Access denied: User has role "${userRole}" but route requires one of: ${to.meta.allowedRoles.join(', ')}`)
+        return next({ name: 'Unauthorized' })
+      }
+    }
+    
+    // Check specific role requirement - UPDATED to handle templeadmin
+    if (to.meta.role) {
+      if (to.meta.role === 'tenant' && userRole === 'templeadmin') {
+        console.log('🔑 DEVELOPMENT: Allowing templeadmin access to tenant-specific route')
+        return next()
+      }
+      
+      if (authStore.userRole !== to.meta.role && mappedRole !== to.meta.role) {
+        console.error(`Access denied: User has role "${authStore.userRole}" but route requires "${to.meta.role}"`)
+        return next({ name: 'Unauthorized' })
+      }
+    }
+  } catch (err) {
+    console.error('Error in router guard:', err)
+    // If there's an error accessing the store, continue to the route without checks
+    // This allows the app to initialize properly
+  }
+  
+  // Continue to the route
   next()
 })
 
@@ -655,7 +768,10 @@ export function useRouteHelpers() {
 
     // NEW: Get role-specific post-login redirect paths - Phase 7
     getPostLoginRedirect: (userRole, entityId = null) => {
-      switch (userRole) {
+      // Map templeadmin to tenant for redirection
+      const mappedRole = userRole === 'templeadmin' ? 'tenant' : userRole
+      
+      switch (mappedRole) {
         case 'tenant':
           return '/tenant/dashboard'
         case 'devotee':

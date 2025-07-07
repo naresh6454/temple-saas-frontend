@@ -1,19 +1,23 @@
 // src/services/seva.service.js
-import { apiClient } from './api.js'
+import api from '@/plugins/axios'
 
 class SevaService {
   /**
    * Get all sevas for a specific entity (temple)
    * @param {string} entityId - Temple ID
-   * @param {Object} params - Query parameters (page, limit, search, status, type)
+   * @param {Object} params - Query parameters
    * @returns {Promise<Object>} Seva list with pagination
    */
   async getSevas(entityId, params = {}) {
     try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas`, { params })
+      // Match backend route GET /sevas/ with entity_id as a query param
+      const response = await api.get('/sevas', { 
+        params: { ...params, entity_id: entityId } 
+      })
+      
       return {
         success: true,
-        data: response.data.sevas || [],
+        data: response.data || [],
         pagination: response.data.pagination || {},
         total: response.data.total || 0
       }
@@ -21,7 +25,7 @@ class SevaService {
       console.error('Error fetching sevas:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch sevas',
+        error: error.response?.data?.error || 'Failed to fetch sevas',
         data: []
       }
     }
@@ -35,16 +39,19 @@ class SevaService {
    */
   async getSevaById(entityId, sevaId) {
     try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas/${sevaId}`)
+      // Use GET /sevas/:id endpoint
+      const response = await api.get(`/sevas/${sevaId}`, {
+        params: { entity_id: entityId }
+      })
       return {
         success: true,
-        data: response.data.seva || null
+        data: response.data || null
       }
     } catch (error) {
       console.error('Error fetching seva:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch seva details',
+        error: error.response?.data?.error || 'Failed to fetch seva details',
         data: null
       }
     }
@@ -58,17 +65,24 @@ class SevaService {
    */
   async createSeva(entityId, sevaData) {
     try {
-      const response = await apiClient.post(`/entities/${entityId}/sevas`, sevaData)
+      // Match backend route POST /sevas/
+      const payload = {
+        ...sevaData,
+        entity_id: entityId
+      }
+      
+      const response = await api.post('/sevas', payload)
+      
       return {
         success: true,
-        data: response.data.seva,
+        data: response.data,
         message: 'Seva created successfully'
       }
     } catch (error) {
       console.error('Error creating seva:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to create seva',
+        error: error.response?.data?.error || 'Failed to create seva',
         errors: error.response?.data?.errors || {}
       }
     }
@@ -83,17 +97,25 @@ class SevaService {
    */
   async updateSeva(entityId, sevaId, sevaData) {
     try {
-      const response = await apiClient.put(`/entities/${entityId}/sevas/${sevaId}`, sevaData)
+      // Since there's no direct PUT /sevas/:id in your routes, we'll use the same path
+      // but make sure to include entity_id in the payload
+      const payload = {
+        ...sevaData,
+        entity_id: entityId
+      }
+      
+      const response = await api.put(`/sevas/${sevaId}`, payload)
+      
       return {
         success: true,
-        data: response.data.seva,
+        data: response.data,
         message: 'Seva updated successfully'
       }
     } catch (error) {
       console.error('Error updating seva:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to update seva',
+        error: error.response?.data?.error || 'Failed to update seva',
         errors: error.response?.data?.errors || {}
       }
     }
@@ -107,7 +129,12 @@ class SevaService {
    */
   async deleteSeva(entityId, sevaId) {
     try {
-      await apiClient.delete(`/entities/${entityId}/sevas/${sevaId}`)
+      // Since there's no direct DELETE /sevas/:id in your routes, we'll use the same path
+      // but include entity_id as a query param
+      await api.delete(`/sevas/${sevaId}`, {
+        params: { entity_id: entityId }
+      })
+      
       return {
         success: true,
         message: 'Seva deleted successfully'
@@ -116,32 +143,34 @@ class SevaService {
       console.error('Error deleting seva:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to delete seva'
+        error: error.response?.data?.error || 'Failed to delete seva'
       }
     }
   }
 
   /**
-   * Get seva bookings for a specific seva
+   * Get seva bookings for entity (temple)
    * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Object>} Seva bookings
+   * @returns {Promise<Object>} Entity seva bookings
    */
-  async getSevaBookings(entityId, sevaId, params = {}) {
+  async getEntityBookings(entityId) {
     try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas/${sevaId}/bookings`, { params })
+      // Match backend route GET /sevas/entity-bookings
+      const response = await api.get('/sevas/entity-bookings', {
+        params: { entity_id: entityId }
+      })
+      
       return {
         success: true,
-        data: response.data.bookings || [],
+        data: response.data || [],
         pagination: response.data.pagination || {},
         total: response.data.total || 0
       }
     } catch (error) {
-      console.error('Error fetching seva bookings:', error)
+      console.error('Error fetching entity bookings:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch seva bookings',
+        error: error.response?.data?.error || 'Failed to fetch bookings',
         data: []
       }
     }
@@ -150,247 +179,105 @@ class SevaService {
   /**
    * Book a seva for devotee
    * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
    * @param {Object} bookingData - Booking information
    * @returns {Promise<Object>} Booking confirmation
    */
-  async bookSeva(entityId, sevaId, bookingData) {
+  async bookSeva(entityId, bookingData) {
     try {
-      const response = await apiClient.post(`/entities/${entityId}/sevas/${sevaId}/book`, bookingData)
+      // Match backend route POST /sevas/bookings
+      const payload = {
+        ...bookingData,
+        entity_id: entityId
+      }
+      
+      const response = await api.post('/sevas/bookings', payload)
+      
       return {
         success: true,
-        data: response.data.booking,
+        data: response.data,
         message: 'Seva booked successfully'
       }
     } catch (error) {
       console.error('Error booking seva:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to book seva',
+        error: error.response?.data?.error || 'Failed to book seva',
         errors: error.response?.data?.errors || {}
       }
     }
   }
 
   /**
-   * Cancel seva booking
-   * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
+   * Update booking status (approve/reject)
    * @param {string} bookingId - Booking ID
-   * @returns {Promise<Object>} Cancellation status
+   * @param {string} status - New status (approved/rejected)
+   * @returns {Promise<Object>} Updated booking
    */
-  async cancelSevaBooking(entityId, sevaId, bookingId) {
+  async updateBookingStatus(bookingId, status) {
     try {
-      await apiClient.delete(`/entities/${entityId}/sevas/${sevaId}/bookings/${bookingId}`)
+      // Match backend route PATCH /sevas/bookings/:id/status
+      const response = await api.patch(`/sevas/bookings/${bookingId}/status`, { 
+        status 
+      })
+      
       return {
         success: true,
-        message: 'Seva booking cancelled successfully'
-      }
-    } catch (error) {
-      console.error('Error cancelling seva booking:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to cancel seva booking'
-      }
-    }
-  }
-
-  /**
-   * Approve/Reject seva booking (Entity Admin only)
-   * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
-   * @param {string} bookingId - Booking ID
-   * @param {string} status - 'approved' or 'rejected'
-   * @param {string} notes - Optional notes
-   * @returns {Promise<Object>} Updated booking status
-   */
-  async updateBookingStatus(entityId, sevaId, bookingId, status, notes = '') {
-    try {
-      const response = await apiClient.patch(
-        `/entities/${entityId}/sevas/${sevaId}/bookings/${bookingId}/status`,
-        { status, notes }
-      )
-      return {
-        success: true,
-        data: response.data.booking,
-        message: `Seva booking ${status} successfully`
+        data: response.data,
+        message: `Booking ${status} successfully`
       }
     } catch (error) {
       console.error('Error updating booking status:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to update booking status'
+        error: error.response?.data?.error || 'Failed to update booking status'
       }
     }
   }
 
   /**
-   * Get seva types/categories for dropdown
-   * @returns {Promise<Object>} Seva types list
+   * Cancel booking
+   * @param {string} bookingId - Booking ID
+   * @returns {Promise<Object>} Cancellation status
    */
-  async getSevaTypes() {
+  async cancelBooking(bookingId) {
     try {
-      const response = await apiClient.get('/seva-types')
+      // Match backend route PATCH /sevas/bookings/:id/cancel
+      const response = await api.patch(`/sevas/bookings/${bookingId}/cancel`)
+      
       return {
         success: true,
-        data: response.data.types || []
+        message: 'Booking cancelled successfully'
       }
     } catch (error) {
-      console.error('Error fetching seva types:', error)
+      console.error('Error cancelling booking:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch seva types',
-        data: []
+        error: error.response?.data?.error || 'Failed to cancel booking'
       }
     }
   }
 
   /**
-   * Get available seva slots for a specific date
-   * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
-   * @param {string} date - Date in YYYY-MM-DD format
-   * @returns {Promise<Object>} Available slots
+   * Get my seva bookings (devotee only)
+   * @returns {Promise<Object>} My bookings
    */
-  async getAvailableSlots(entityId, sevaId, date) {
+  async getMyBookings() {
     try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas/${sevaId}/slots`, {
-        params: { date }
-      })
+      // Match backend route GET /sevas/my-bookings
+      const response = await api.get('/sevas/my-bookings')
+      
       return {
         success: true,
-        data: response.data.slots || []
-      }
-    } catch (error) {
-      console.error('Error fetching available slots:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch available slots',
-        data: []
-      }
-    }
-  }
-
-  /**
-   * Get devotee's seva bookings
-   * @param {string} entityId - Temple ID
-   * @param {string} devoteeId - Devotee ID
-   * @param {Object} params - Query parameters
-   * @returns {Promise<Object>} Devotee's seva bookings
-   */
-  async getDevoteeSevaBookings(entityId, devoteeId, params = {}) {
-    try {
-      const response = await apiClient.get(`/entities/${entityId}/devotees/${devoteeId}/seva-bookings`, { params })
-      return {
-        success: true,
-        data: response.data.bookings || [],
+        data: response.data || [],
         pagination: response.data.pagination || {},
         total: response.data.total || 0
       }
     } catch (error) {
-      console.error('Error fetching devotee seva bookings:', error)
+      console.error('Error fetching my bookings:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch seva bookings',
+        error: error.response?.data?.error || 'Failed to fetch bookings',
         data: []
-      }
-    }
-  }
-
-  /**
-   * Get seva statistics for dashboard
-   * @param {string} entityId - Temple ID
-   * @param {Object} params - Query parameters (period, startDate, endDate)
-   * @returns {Promise<Object>} Seva statistics
-   */
-  async getSevaStats(entityId, params = {}) {
-    try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas/stats`, { params })
-      return {
-        success: true,
-        data: response.data.stats || {}
-      }
-    } catch (error) {
-      console.error('Error fetching seva stats:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch seva statistics',
-        data: {}
-      }
-    }
-  }
-
-  /**
-   * Export seva bookings to Excel/PDF
-   * @param {string} entityId - Temple ID
-   * @param {Object} params - Export parameters (format, filters, dateRange)
-   * @returns {Promise<Object>} Export file or download link
-   */
-  async exportSevaBookings(entityId, params = {}) {
-    try {
-      const response = await apiClient.get(`/entities/${entityId}/sevas/export`, {
-        params,
-        responseType: 'blob'
-      })
-      return {
-        success: true,
-        data: response.data,
-        filename: response.headers['content-disposition']?.split('filename=')[1]?.replace(/"/g, '') || 'seva-bookings.xlsx'
-      }
-    } catch (error) {
-      console.error('Error exporting seva bookings:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to export seva bookings'
-      }
-    }
-  }
-
-  /**
-   * Assign volunteer to seva
-   * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
-   * @param {string} volunteerId - Volunteer ID
-   * @returns {Promise<Object>} Assignment status
-   */
-  async assignVolunteer(entityId, sevaId, volunteerId) {
-    try {
-      const response = await apiClient.post(`/entities/${entityId}/sevas/${sevaId}/assign-volunteer`, {
-        volunteerId
-      })
-      return {
-        success: true,
-        data: response.data,
-        message: 'Volunteer assigned successfully'
-      }
-    } catch (error) {
-      console.error('Error assigning volunteer:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to assign volunteer'
-      }
-    }
-  }
-
-  /**
-   * Remove volunteer from seva
-   * @param {string} entityId - Temple ID
-   * @param {string} sevaId - Seva ID
-   * @param {string} volunteerId - Volunteer ID
-   * @returns {Promise<Object>} Removal status
-   */
-  async removeVolunteer(entityId, sevaId, volunteerId) {
-    try {
-      await apiClient.delete(`/entities/${entityId}/sevas/${sevaId}/volunteers/${volunteerId}`)
-      return {
-        success: true,
-        message: 'Volunteer removed successfully'
-      }
-    } catch (error) {
-      console.error('Error removing volunteer:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to remove volunteer'
       }
     }
   }

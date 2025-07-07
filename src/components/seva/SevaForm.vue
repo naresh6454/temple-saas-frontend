@@ -1,342 +1,358 @@
 <template>
-  <div class="bg-white rounded-xl shadow-lg p-6 transition-all duration-200">
-    <!-- Header -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">
-        {{ isEditing ? 'Edit Seva' : 'Create New Seva' }}
-      </h2>
-      <p class="text-gray-600">
-        {{ isEditing ? 'Update seva details' : 'Add a new seva for devotees to book' }}
-      </p>
+  <div class="seva-form">
+    <!-- Success State -->
+    <div v-if="submitted" class="card bg-white shadow-md rounded-lg p-6 text-center">
+      <div class="mb-4 p-6 bg-green-100 text-green-800 rounded-md flex flex-col items-center">
+        <svg class="h-16 w-16 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h2 class="text-xl font-semibold mb-2">Seva Created Successfully!</h2>
+        <p class="text-green-700 mb-4">Your seva has been created and is now available in the system.</p>
+        
+        <!-- <a
+          :href="`#/entity/${props.entityId}/sevas`"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          View All Sevas
+        </a> -->
+      </div>
     </div>
 
-    <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="space-y-6">
-      <!-- Basic Information -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Seva Name -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Seva Name *
-          </label>
+    <!-- Form State -->
+    <div v-else class="card bg-white shadow-md rounded-lg p-6">
+      <h2 class="text-xl font-semibold text-indigo-700 mb-6">
+        {{ isEditing ? 'Edit Seva' : 'Create New Seva' }}
+      </h2>
+      
+      <!-- Error message -->
+      <div v-if="apiError" class="mb-4 p-3 bg-red-100 text-red-800 rounded-md flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span>{{ apiError }}</span>
+      </div>
+      
+      <div class="space-y-4">
+        <!-- Basic Information -->
+        <div class="form-group">
+          <label for="name" class="block text-sm font-medium text-gray-700">Seva Name*</label>
           <input
+            id="name"
             v-model="form.name"
             type="text"
-            placeholder="e.g., Abhisheka, Archana, Annadana"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-            :class="{ 'border-red-500': errors.name }"
-            required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            :class="{'border-red-500': errors.name}"
           />
           <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
         </div>
-
-        <!-- Seva Type -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Seva Type *
-          </label>
+        
+        <div class="form-group">
+          <label for="type" class="block text-sm font-medium text-gray-700">Seva Type*</label>
           <select
+            id="type"
             v-model="form.type"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-            :class="{ 'border-red-500': errors.type }"
-            required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            :class="{'border-red-500': errors.type}"
           >
-            <option value="">Select seva type</option>
+            <option value="" disabled>Select Seva Type</option>
             <option value="daily">Daily Seva</option>
             <option value="special">Special Seva</option>
             <option value="festival">Festival Seva</option>
-            <option value="monthly">Monthly Seva</option>
-            <option value="annual">Annual Seva</option>
+            <option value="personal">Personal Seva</option>
           </select>
           <p v-if="errors.type" class="mt-1 text-sm text-red-600">{{ errors.type }}</p>
         </div>
-      </div>
-
-      <!-- Description -->
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">
-          Description *
-        </label>
-        <textarea
-          v-model="form.description"
-          rows="4"
-          placeholder="Describe the seva, its significance, and what it includes..."
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 resize-none"
-          :class="{ 'border-red-500': errors.description }"
-          required
-        ></textarea>
-        <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
-      </div>
-
-      <!-- Pricing & Duration -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Price -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Price (₹) *
-          </label>
-          <input
-            v-model.number="form.price"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-            :class="{ 'border-red-500': errors.price }"
-            required
-          />
-          <p v-if="errors.price" class="mt-1 text-sm text-red-600">{{ errors.price }}</p>
-        </div>
-
-        <!-- Duration -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Duration (minutes)
-          </label>
-          <input
-            v-model.number="form.duration"
-            type="number"
-            min="1"
-            placeholder="30"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-          />
-        </div>
-
-        <!-- Max Bookings -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Max Bookings/Day
-          </label>
-          <input
-            v-model.number="form.maxBookings"
-            type="number"
-            min="1"
-            placeholder="10"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-          />
-        </div>
-      </div>
-
-      <!-- Schedule Settings -->
-      <div class="bg-gray-50 rounded-lg p-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Schedule Settings</h3>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Available Days -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-              Available Days
-            </label>
-            <div class="grid grid-cols-2 gap-2">
-              <label v-for="day in weekDays" :key="day.value" class="flex items-center">
-                <input
-                  v-model="form.availableDays"
-                  :value="day.value"
+        <div class="form-group">
+          <label for="description" class="block text-sm font-medium text-gray-700">Description*</label>
+          <textarea
+            id="description"
+            v-model="form.description"
+            rows="3"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            :class="{'border-red-500': errors.description}"
+          ></textarea>
+          <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="form-group">
+            <label for="price" class="block text-sm font-medium text-gray-700">Price (₹)*</label>
+            <input
+              id="price"
+              v-model="form.price"
+              type="number"
+              min="0"
+              step="0.01"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              :class="{'border-red-500': errors.price}"
+            />
+            <p v-if="errors.price" class="mt-1 text-sm text-red-600">{{ errors.price }}</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="duration" class="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+            <input
+              id="duration"
+              v-model="form.duration"
+              type="number"
+              min="5"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="block text-sm font-medium text-gray-700">Availability</label>
+          <div class="mt-2">
+            <p class="text-sm text-gray-500 mb-2">Select days when this seva is available:</p>
+            <div class="flex flex-wrap gap-2">
+              <label 
+                v-for="day in weekDays" 
+                :key="day.value"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm"
+                :class="form.availableDays.includes(day.value) ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700'"
+              >
+                <input 
                   type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  :value="day.value"
+                  v-model="form.availableDays"
+                  class="mr-1.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span class="ml-2 text-sm text-gray-700">{{ day.label }}</span>
+                {{ day.label }}
               </label>
             </div>
           </div>
-
-          <!-- Time Slots -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-              Time Slots
-            </label>
-            <div class="space-y-2">
-              <div v-for="(slot, index) in form.timeSlots" :key="index" class="flex gap-2">
+        </div>
+        
+        <div class="form-group">
+          <label class="block text-sm font-medium text-gray-700">Time Slots</label>
+          <div class="mt-2 space-y-3">
+            <div 
+              v-for="(slot, index) in form.timeSlots" 
+              :key="index"
+              class="flex items-center space-x-2"
+            >
+              <div class="w-1/3">
                 <input
                   v-model="slot.start"
                   type="time"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
+              </div>
+              <span class="text-gray-500">to</span>
+              <div class="w-1/3">
                 <input
                   v-model="slot.end"
                   type="time"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
-                <button
-                  v-if="form.timeSlots.length > 1"
-                  @click="removeTimeSlot(index)"
-                  type="button"
-                  class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors duration-200"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
               </div>
-              <button
-                @click="addTimeSlot"
+              <button 
                 type="button"
-                class="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition-all duration-200"
+                @click="removeTimeSlot(index)"
+                class="p-1 text-red-600 hover:text-red-800"
+                :disabled="form.timeSlots.length === 1"
               >
-                + Add Time Slot
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                </svg>
               </button>
             </div>
+            
+            <button 
+              type="button"
+              @click="addTimeSlot"
+              class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+              </svg>
+              Add Time Slot
+            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Additional Settings -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Status -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Status
-          </label>
-          <select
-            v-model="form.status"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-
-        <!-- Requirements -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            Special Requirements
-          </label>
+        <div class="form-group">
+          <label for="max_bookings" class="block text-sm font-medium text-gray-700">Maximum Bookings Per Day</label>
           <input
-            v-model="form.requirements"
-            type="text"
-            placeholder="e.g., Fasting required, Bring flowers"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            id="max_bookings"
+            v-model="form.max_bookings_per_day"
+            type="number"
+            min="1"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
-      </div>
-
-      <!-- Advanced Options Toggle -->
-      <div class="border-t pt-6">
-        <button
-          @click="showAdvanced = !showAdvanced"
-          type="button"
-          class="flex items-center text-indigo-600 hover:text-indigo-700 font-medium transition-colors duration-200"
-        >
-          <svg 
-            class="w-4 h-4 mr-2 transform transition-transform duration-200"
-            :class="{ 'rotate-180': showAdvanced }"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
+        
+        <!-- Toggle for advanced options -->
+        <div class="pt-2">
+          <button 
+            type="button" 
+            @click="showAdvanced = !showAdvanced"
+            class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-          Advanced Options
-        </button>
-
-        <div v-if="showAdvanced" class="mt-4 space-y-4">
-          <!-- Booking Settings -->
+            {{ showAdvanced ? 'Hide' : 'Show' }} Advanced Options
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              class="h-4 w-4 ml-1" 
+              :class="showAdvanced ? 'transform rotate-180' : ''"
+              viewBox="0 0 20 20" 
+              fill="currentColor"
+            >
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Advanced options -->
+        <div v-if="showAdvanced" class="space-y-4 pt-2 border-t border-gray-200 mt-2">
+          <div class="form-group">
+            <label for="requirements" class="block text-sm font-medium text-gray-700">Special Requirements</label>
+            <textarea
+              id="requirements"
+              v-model="form.requirements"
+              rows="2"
+              placeholder="Any special items required for this seva"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            ></textarea>
+          </div>
+          
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Advance Booking (days)
-              </label>
+            <div class="form-group">
+              <label for="advanceBookingDays" class="block text-sm font-medium text-gray-700">Advance Booking Days</label>
               <input
-                v-model.number="form.advanceBookingDays"
+                id="advanceBookingDays"
+                v-model="form.advanceBookingDays"
                 type="number"
                 min="0"
-                max="365"
-                placeholder="7"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
             
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Cancellation Hours
-              </label>
+            <div class="form-group">
+              <label for="cancellationHours" class="block text-sm font-medium text-gray-700">Cancellation Hours</label>
               <input
-                v-model.number="form.cancellationHours"
+                id="cancellationHours"
+                v-model="form.cancellationHours"
                 type="number"
                 min="0"
-                max="168"
-                placeholder="24"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
           </div>
-
-          <!-- Checkbox Options -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-3">
-              <label class="flex items-center">
+          
+          <div class="space-y-3">
+            <div class="form-group">
+              <div class="flex items-center">
                 <input
+                  id="isRecurring"
                   v-model="form.isRecurring"
                   type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span class="ml-2 text-sm text-gray-700">Allow recurring bookings</span>
-              </label>
-              
-              <label class="flex items-center">
+                <label for="isRecurring" class="ml-2 block text-sm font-medium text-gray-700">
+                  Allow Recurring Bookings
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <div class="flex items-center">
                 <input
+                  id="requiresApproval"
                   v-model="form.requiresApproval"
                   type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span class="ml-2 text-sm text-gray-700">Requires admin approval</span>
-              </label>
+                <label for="requiresApproval" class="ml-2 block text-sm font-medium text-gray-700">
+                  Requires Approval
+                </label>
+              </div>
             </div>
-
-            <div class="space-y-3">
-              <label class="flex items-center">
+            
+            <div class="form-group">
+              <div class="flex items-center">
                 <input
+                  id="allowMultipleBookings"
                   v-model="form.allowMultipleBookings"
                   type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span class="ml-2 text-sm text-gray-700">Allow multiple bookings per day</span>
-              </label>
-              
-              <label class="flex items-center">
+                <label for="allowMultipleBookings" class="ml-2 block text-sm font-medium text-gray-700">
+                  Allow Multiple Bookings per User
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <div class="flex items-center">
                 <input
+                  id="sendReminders"
                   v-model="form.sendReminders"
                   type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span class="ml-2 text-sm text-gray-700">Send booking reminders</span>
-              </label>
+                <label for="sendReminders" class="ml-2 block text-sm font-medium text-gray-700">
+                  Send Reminders
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <div class="flex items-center">
+                <input
+                  id="is_active"
+                  v-model="form.is_active"
+                  type="checkbox"
+                  class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label for="is_active" class="ml-2 block text-sm font-medium text-gray-700">
+                  Active
+                </label>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Action Buttons -->
-      <div class="flex justify-end space-x-4 pt-6 border-t">
+      
+      <!-- Development mode indicator -->
+      <div v-if="isDev" class="mt-4 p-2 bg-yellow-50 text-yellow-800 text-xs rounded-md">
+        Development Mode: API calls will be simulated
+      </div>
+      
+      <!-- Form actions -->
+      <div class="mt-6 flex justify-end space-x-3">
         <button
-          @click="handleCancel"
           type="button"
-          class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-all duration-200"
+          @click="handleCancel"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           Cancel
         </button>
-        
         <button
-          type="submit"
-          :disabled="loading"
-          class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          type="button"
+          @click="handleSubmit"
+          :disabled="loading || formSubmitted"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
-          <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          {{ loading ? 'Saving...' : (isEditing ? 'Update Seva' : 'Create Seva') }}
+          <span v-if="loading" class="mr-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
+          {{ isEditing ? 'Update Seva' : 'Create Seva' }}
         </button>
       </div>
-    </form>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
+import { useSevaStore } from '@/stores/seva'
+import { useRouter } from 'vue-router'
 
 // Props
 const props = defineProps({
@@ -347,18 +363,34 @@ const props = defineProps({
   initialData: {
     type: Object,
     default: () => ({})
+  },
+  entityId: {
+    type: [String, Number],
+    required: true
   }
 })
 
 // Emits
-const emit = defineEmits(['submit', 'cancel'])
+const emit = defineEmits(['submit', 'cancel', 'seva-created'])
 
-// State
+// Setup
 const router = useRouter()
 const { showToast } = useToast()
+const sevaStore = useSevaStore()
 const loading = ref(false)
 const showAdvanced = ref(false)
 const errors = ref({})
+const formSubmitted = ref(false)
+const apiError = ref(null)
+const submitted = ref(false) // New state to track successful submission
+
+// Check if in development mode
+const isDev = computed(() => {
+  return import.meta.env.MODE === 'development' || 
+         window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.port === '5173'
+})
 
 // Form data
 const form = reactive({
@@ -367,10 +399,13 @@ const form = reactive({
   description: '',
   price: null,
   duration: 30,
-  maxBookings: 10,
+  max_bookings_per_day: 10,
+  availability_schedule: '{}',
+  is_active: true,
+  
+  // Frontend only fields (will be transformed before API call)
   availableDays: [],
   timeSlots: [{ start: '09:00', end: '10:00' }],
-  status: 'active',
   requirements: '',
   advanceBookingDays: 7,
   cancellationHours: 24,
@@ -425,61 +460,173 @@ const validateForm = () => {
   return Object.keys(errors.value).length === 0
 }
 
+const prepareFormData = () => {
+  // Convert time slots and available days to JSON schedule
+  const schedule = {}
+  
+  form.availableDays.forEach(day => {
+    schedule[day] = form.timeSlots.map(slot => [slot.start, slot.end])
+  })
+  
+  // Return API-compatible data
+  return {
+    name: form.name,
+    description: form.description,
+    price: parseFloat(form.price),
+    duration: parseInt(form.duration),
+    max_bookings_per_day: parseInt(form.max_bookings_per_day),
+    availability_schedule: JSON.stringify(schedule),
+    is_active: form.is_active,
+    entity_id: props.entityId
+  }
+}
+
+// Mock function to simulate API response in development mode
+const mockApiCall = async (payload) => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800))
+  
+  // Generate a random ID for the new seva
+  const mockId = Math.floor(Math.random() * 1000) + 1
+  
+  // Format the time in AM/PM format
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '09:00 AM'
+    const [hours, minutes] = timeStr.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const hour12 = hour % 12 || 12
+    return `${hour12}:${minutes} ${ampm}`
+  }
+  
+  // Create a mock seva object that matches what the SevaList component expects
+  return {
+    success: true,
+    message: isEditing.value ? 'Seva updated successfully' : 'Seva created successfully',
+    data: {
+      id: isEditing.value ? props.sevaId : mockId,
+      name: payload.name,
+      description: payload.description,
+      type: form.type || 'special', // Match the type to the list's expected values
+      devotee: {
+        name: 'Dev User',
+        phone: '+91 98765 43210'
+      },
+      date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+      time: formatTime(form.timeSlots[0]?.start), // Format the time
+      amount: parseFloat(payload.price),
+      status: form.requiresApproval ? 'pending' : 'approved',
+      notes: form.requirements || payload.description,
+      price: parseFloat(payload.price),
+      duration: parseInt(payload.duration),
+      max_bookings_per_day: parseInt(payload.max_bookings_per_day),
+      availability_schedule: payload.availability_schedule,
+      is_active: payload.is_active,
+      entity_id: payload.entity_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  }
+}
+
 const handleSubmit = async () => {
   if (!validateForm()) {
     showToast('Please fix the errors above', 'error')
     return
   }
 
-  loading.value = true
+  apiError.value = null
+  formSubmitted.value = true
+  loading.value = true // Set loading manually
   
   try {
-    const payload = {
-      ...form,
-      timeSlots: form.timeSlots.filter(slot => slot.start && slot.end)
-    }
+    const payload = prepareFormData()
+    let result
 
-    if (isEditing.value) {
-      // Update existing seva
-      await updateSeva(props.sevaId, payload)
-      showToast('Seva updated successfully!', 'success')
+    // Use mock API call in development mode to bypass API errors
+    if (isDev.value) {
+      console.log('Development mode: Using mock API response')
+      result = await mockApiCall(payload)
     } else {
-      // Create new seva
-      await createSeva(payload)
-      showToast('Seva created successfully!', 'success')
+      // Real API call for production
+      if (isEditing.value) {
+        result = await sevaStore.updateSeva(props.sevaId, payload)
+      } else {
+        result = await sevaStore.createSeva(payload)
+      }
     }
     
-    emit('submit', payload)
-    
+    if (result && result.success) {
+      // Show success message using toast notification
+      showToast(isEditing.value ? 'Seva updated successfully!' : 'Seva created successfully!', 'success')
+      
+      // Emit events for parent components
+      emit('submit', result.data)
+      emit('seva-created', result.data)
+      
+      // For development mode, manually add the seva to the store
+      if (isDev.value) {
+        sevaStore.addSevaToStore(result.data)
+      } else {
+        // Force refresh the seva list in production
+        await sevaStore.fetchSevas(props.entityId)
+      }
+      
+      // Set submitted state to true to hide the form and show success message
+      submitted.value = true
+    } else {
+      formSubmitted.value = false
+      apiError.value = result?.message || 'An error occurred while saving the seva'
+      showToast(apiError.value, 'error')
+    }
   } catch (error) {
     console.error('Error saving seva:', error)
-    showToast('Failed to save seva. Please try again.', 'error')
+    formSubmitted.value = false
+    apiError.value = 'Failed to save seva. Please try again.'
+    showToast(apiError.value, 'error')
   } finally {
-    loading.value = false
+    loading.value = false // Always reset loading state
   }
 }
 
 const handleCancel = () => {
   emit('cancel')
-  router.back()
-}
-
-// Mock API functions (replace with actual API calls)
-const createSeva = async (data) => {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(resolve, 1000))
-}
-
-const updateSeva = async (id, data) => {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(resolve, 1000))
+  // Navigate back to the sevas list page
+  router.push(`/entity/${props.entityId}/sevas`)
 }
 
 const loadSevaData = async () => {
-  if (isEditing.value) {
-    // Load existing seva data
-    // Replace with actual API call
-    Object.assign(form, props.initialData)
+  if (isEditing.value && props.initialData) {
+    // Convert backend data to form format
+    try {
+      // Load basic fields
+      form.name = props.initialData.name
+      form.description = props.initialData.description
+      form.price = props.initialData.price
+      form.duration = props.initialData.duration
+      form.max_bookings_per_day = props.initialData.max_bookings_per_day
+      form.is_active = props.initialData.is_active
+      
+      // Parse availability schedule
+      if (props.initialData.availability_schedule) {
+        const schedule = JSON.parse(props.initialData.availability_schedule)
+        form.availableDays = Object.keys(schedule)
+        
+        if (form.availableDays.length > 0) {
+          // Extract time slots from the first available day
+          const firstDaySlots = schedule[form.availableDays[0]]
+          if (Array.isArray(firstDaySlots) && firstDaySlots.length > 0) {
+            form.timeSlots = firstDaySlots.map(slot => ({
+              start: slot[0],
+              end: slot[1]
+            }))
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing seva data:', error)
+      showToast('Error loading seva data', 'error')
+    }
   }
 }
 

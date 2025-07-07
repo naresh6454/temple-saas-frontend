@@ -195,13 +195,21 @@
                 </button>
                 
                 <div v-if="application.status === 'pending'" class="flex flex-col space-y-2">
-                  <button @click="approveApplication(application)" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 whitespace-nowrap">
+                  <button 
+                    @click="approveApplication(application)" 
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors duration-200 whitespace-nowrap"
+                    :disabled="isProcessing"
+                  >
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                     Approve
                   </button>
-                  <button @click="rejectApplication(application)" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors duration-200 whitespace-nowrap">
+                  <button 
+                    @click="rejectApplication(application)" 
+                    class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors duration-200 whitespace-nowrap"
+                    :disabled="isProcessing"
+                  >
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -222,7 +230,14 @@
           </h2>
         </div>
         <div class="p-6">
-          <div class="space-y-4">
+          <div v-if="isLoadingActivities" class="flex justify-center items-center py-8">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <span class="ml-3 text-gray-600">Loading activities...</span>
+          </div>
+          <div v-else-if="recentActivities.length === 0" class="text-center py-8">
+            <p class="text-gray-600">No recent activities found</p>
+          </div>
+          <div v-else class="space-y-4">
             <div v-for="activity in recentActivities" :key="activity.id" class="flex items-start space-x-4">
               <div :class="getActivityIconClass(activity.type)" class="p-2 rounded-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,10 +337,18 @@
             Close
           </button>
           <div v-if="selectedApplication?.status === 'pending'" class="flex space-x-3">
-            <button @click="approveApplication(selectedApplication)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+            <button 
+              @click="approveApplication(selectedApplication)" 
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+              :disabled="isProcessing"
+            >
               Approve Temple
             </button>
-            <button @click="rejectApplication(selectedApplication)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+            <button 
+              @click="rejectApplication(selectedApplication)" 
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+              :disabled="isProcessing"
+            >
               Reject Application
             </button>
           </div>
@@ -347,7 +370,11 @@
           <button @click="closeRejectModal" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
             Cancel
           </button>
-          <button @click="confirmReject" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+          <button 
+            @click="confirmReject" 
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+            :disabled="isProcessing"
+          >
             Confirm Reject
           </button>
         </div>
@@ -358,129 +385,33 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useToast } from '@/composables/useToast'
+import { apiClient } from '@/plugins/axios'
+
+// Toast notifications
+const toast = useToast()
 
 // Reactive data
 const isLoading = ref(false)
+const isLoadingActivities = ref(false)
+const isProcessing = ref(false)
 const filterStatus = ref('all')
 const showDetailsModal = ref(false)
 const showRejectModal = ref(false)
 const selectedApplication = ref(null)
 const rejectionNotes = ref('')
 
-// Mock data - In real app, this would come from API
+// API data
 const summaryStats = ref({
-  pendingApprovals: 8,
-  activeTemples: 142,
-  totalUsers: 5847,
-  rejectedTemples: 12,
-  newThisWeek: 3
+  pendingApprovals: 0,
+  activeTemples: 0,
+  totalUsers: 0,
+  rejectedTemples: 0,
+  newThisWeek: 0
 })
 
-const templeApplications = ref([
-  {
-    id: 1,
-    templeName: 'Sri Venkateswara Temple',
-    adminName: 'Rajesh Kumar',
-    adminEmail: 'rajesh@temple.com',
-    phone: '+91 9876543210',
-    city: 'Tirupati',
-    state: 'Andhra Pradesh',
-    address: '123 Temple Street, Tirupati, Andhra Pradesh, 517501',
-    status: 'pending',
-    submittedAt: '2024-01-15T10:30:00Z',
-    registrationType: 'Religious Trust',
-    documents: [
-      { id: 1, name: 'Trust Registration Certificate.pdf', size: '2.4 MB', type: 'PDF' },
-      { id: 2, name: 'Tax Exemption Certificate.pdf', size: '1.8 MB', type: 'PDF' },
-      { id: 3, name: 'Property Documents.pdf', size: '3.2 MB', type: 'PDF' }
-    ]
-  },
-  {
-    id: 2,
-    templeName: 'Ganesh Mandir',
-    adminName: 'Priya Sharma', 
-    adminEmail: 'priya@ganeshmandir.org',
-    phone: '+91 9765432108',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    address: '456 Devotion Road, Andheri, Mumbai, Maharashtra, 400053',
-    status: 'pending',
-    submittedAt: '2024-01-18T14:15:00Z',
-    registrationType: 'Society',
-    documents: [
-      { id: 4, name: 'Society Registration.pdf', size: '1.9 MB', type: 'PDF' },
-      { id: 5, name: 'Address Proof.pdf', size: '1.2 MB', type: 'PDF' }
-    ]
-  },
-  {
-    id: 3,
-    templeName: 'Hanuman Temple',
-    adminName: 'Suresh Reddy',
-    adminEmail: 'suresh@hanumantemple.in',
-    phone: '+91 9654321097',
-    city: 'Hyderabad',
-    state: 'Telangana', 
-    address: '789 Bhakti Lane, Secunderabad, Telangana, 500003',
-    status: 'approved',
-    submittedAt: '2024-01-10T09:45:00Z',
-    approvedAt: '2024-01-12T16:20:00Z',
-    registrationType: 'Trust',
-    documents: [
-      { id: 6, name: 'Trust Deed.pdf', size: '4.1 MB', type: 'PDF' }
-    ]
-  },
-  {
-    id: 4,
-    templeName: 'Krishna Temple',
-    adminName: 'Meera Patel',
-    adminEmail: 'meera@krishnatemple.org',
-    phone: null,
-    city: 'Ahmedabad',
-    state: 'Gujarat',
-    address: '321 Divine Street, Maninagar, Ahmedabad, Gujarat, 380008',
-    status: 'rejected',
-    submittedAt: '2024-01-08T11:00:00Z',
-    rejectedAt: '2024-01-11T13:30:00Z',
-    notes: 'Incomplete documentation. Missing property ownership papers.',
-    registrationType: 'Trust',
-    documents: [
-      { id: 7, name: 'Basic Registration.pdf', size: '1.5 MB', type: 'PDF' }
-    ]
-  }
-])
-
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'approval',
-    description: 'Approved Hanuman Temple registration for Suresh Reddy',
-    timestamp: '2024-01-20T10:30:00Z'
-  },
-  {
-    id: 2,
-    type: 'rejection',
-    description: 'Rejected Krishna Temple application due to incomplete documents',
-    timestamp: '2024-01-19T15:45:00Z'
-  },
-  {
-    id: 3,
-    type: 'new_application',
-    description: 'New temple application received from Ganesh Mandir',
-    timestamp: '2024-01-18T14:15:00Z'
-  },
-  {
-    id: 4,
-    type: 'approval',
-    description: 'Approved Durga Temple registration for Kavita Singh',
-    timestamp: '2024-01-17T09:20:00Z'
-  },
-  {
-    id: 5,
-    type: 'new_application',
-    description: 'New temple application received from Sri Venkateswara Temple',
-    timestamp: '2024-01-15T10:30:00Z'
-  }
-])
+const templeApplications = ref([])
+const recentActivities = ref([])
 
 // Computed properties
 const filteredApplications = computed(() => {
@@ -491,12 +422,115 @@ const filteredApplications = computed(() => {
 })
 
 // Methods
+const loadDashboardStats = async () => {
+  try {
+    const response = await apiClient.admin.getSystemStats()
+    
+    if (response.data) {
+      // Map API response to our stats object
+      summaryStats.value = {
+        pendingApprovals: response.data.pendingTemples || 0,
+        activeTemples: response.data.activeTemples || 0,
+        totalUsers: response.data.totalUsers || 0,
+        rejectedTemples: response.data.rejectedTemples || 0,
+        newThisWeek: response.data.newTemplesThisWeek || 0
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load stats:', error)
+    toast.error('Failed to load dashboard statistics')
+  }
+}
+
+const loadPendingTemples = async () => {
+  try {
+    isLoading.value = true
+    const response = await apiClient.admin.getPendingTemples()
+    
+    if (response.data) {
+      // Map API response to our applications array
+      templeApplications.value = response.data.map(temple => ({
+        id: temple.id,
+        templeName: temple.name,
+        adminName: temple.adminName,
+        adminEmail: temple.adminEmail,
+        phone: temple.phone,
+        city: temple.city,
+        state: temple.state,
+        address: temple.address,
+        status: temple.status,
+        submittedAt: temple.createdAt,
+        approvedAt: temple.approvedAt,
+        rejectedAt: temple.rejectedAt,
+        notes: temple.notes,
+        registrationType: temple.registrationType,
+        documents: temple.documents || []
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to load pending temples:', error)
+    toast.error('Failed to load pending temple applications')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const loadRecentActivities = async () => {
+  try {
+    isLoadingActivities.value = true
+    // This endpoint might need to be implemented on your backend
+    // For now, we'll use the current activities as a placeholder
+    
+    // Simulating an API call for activities
+    // In a real implementation, you would replace this with an actual API call:
+    // const response = await apiClient.admin.getRecentActivities()
+    
+    // Placeholder data - replace with actual API implementation
+    setTimeout(() => {
+      recentActivities.value = [
+        {
+          id: 1,
+          type: 'approval',
+          description: 'Approved Hanuman Temple registration for Suresh Reddy',
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: 2,
+          type: 'rejection',
+          description: 'Rejected Krishna Temple application due to incomplete documents',
+          timestamp: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+        },
+        {
+          id: 3,
+          type: 'new_application',
+          description: 'New temple application received from Ganesh Mandir',
+          timestamp: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+        }
+      ]
+      isLoadingActivities.value = false
+    }, 1000)
+  } catch (error) {
+    console.error('Failed to load activities:', error)
+    toast.error('Failed to load recent activities')
+    isLoadingActivities.value = false
+  }
+}
+
 const refreshData = async () => {
-  isLoading.value = true
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  isLoading.value = false
-  showToast('Data refreshed successfully', 'success')
+  try {
+    isLoading.value = true
+    await Promise.all([
+      loadDashboardStats(),
+      loadPendingTemples(),
+      loadRecentActivities()
+    ])
+    toast.success('Data refreshed successfully')
+  } catch (error) {
+    console.error('Error refreshing data:', error)
+    toast.error('Failed to refresh data')
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const viewApplication = (application) => {
@@ -509,36 +543,53 @@ const closeDetailsModal = () => {
   selectedApplication.value = null
 }
 
-const approveApplication = (application) => {
-  if (showDetailsModal.value) {
-    closeDetailsModal()
-  }
-  
-  // Update application status
-  const index = templeApplications.value.findIndex(app => app.id === application.id)
-  if (index !== -1) {
-    templeApplications.value[index].status = 'approved'
-    templeApplications.value[index].approvedAt = new Date().toISOString()
+const approveApplication = async (application) => {
+  if (isProcessing.value) return
+
+  try {
+    isProcessing.value = true
+    
+    if (showDetailsModal.value) {
+      closeDetailsModal()
+    }
+    
+    // Call API to approve temple
+    await apiClient.admin.approveTemple(application.id, 'Approved by super admin')
+    
+    // Update local state
+    const index = templeApplications.value.findIndex(app => app.id === application.id)
+    if (index !== -1) {
+      templeApplications.value[index].status = 'approved'
+      templeApplications.value[index].approvedAt = new Date().toISOString()
+    }
     
     // Update stats
     summaryStats.value.pendingApprovals--
     summaryStats.value.activeTemples++
     
     // Add to recent activities
-    recentActivities.value.unshift({
+    const newActivity = {
       id: Date.now(),
       type: 'approval',
       description: `Approved ${application.templeName} registration for ${application.adminName}`,
       timestamp: new Date().toISOString()
-    })
+    }
     
-    showToast(`${application.templeName} has been approved successfully!`, 'success')
+    recentActivities.value.unshift(newActivity)
+    
+    toast.success(`${application.templeName} has been approved successfully!`)
+  } catch (error) {
+    console.error('Error approving temple:', error)
+    toast.error('Failed to approve temple. Please try again.')
+  } finally {
+    isProcessing.value = false
   }
 }
 
 const rejectApplication = (application) => {
   selectedApplication.value = application
   showRejectModal.value = true
+  
   if (showDetailsModal.value) {
     closeDetailsModal()
   }
@@ -550,36 +601,52 @@ const closeRejectModal = () => {
   rejectionNotes.value = ''
 }
 
-const confirmReject = () => {
+const confirmReject = async () => {
   if (!rejectionNotes.value.trim()) {
-    showToast('Please provide a reason for rejection', 'error')
+    toast.error('Please provide a reason for rejection')
     return
   }
   
-  const application = selectedApplication.value
-  const index = templeApplications.value.findIndex(app => app.id === application.id)
+  if (isProcessing.value) return
   
-  if (index !== -1) {
-    templeApplications.value[index].status = 'rejected'
-    templeApplications.value[index].rejectedAt = new Date().toISOString()
-    templeApplications.value[index].notes = rejectionNotes.value
+  try {
+    isProcessing.value = true
+    
+    const application = selectedApplication.value
+    
+    // Call API to reject temple
+    await apiClient.admin.rejectTemple(application.id, rejectionNotes.value)
+    
+    // Update local state
+    const index = templeApplications.value.findIndex(app => app.id === application.id)
+    if (index !== -1) {
+      templeApplications.value[index].status = 'rejected'
+      templeApplications.value[index].rejectedAt = new Date().toISOString()
+      templeApplications.value[index].notes = rejectionNotes.value
+    }
     
     // Update stats
     summaryStats.value.pendingApprovals--
     summaryStats.value.rejectedTemples++
     
     // Add to recent activities
-    recentActivities.value.unshift({
+    const newActivity = {
       id: Date.now(),
       type: 'rejection',
-      description: `Rejected ${application.templeName} application - ${rejectionNotes.value.slice(0, 50)}...`,
+      description: `Rejected ${application.templeName} application - ${rejectionNotes.value.slice(0, 50)}${rejectionNotes.value.length > 50 ? '...' : ''}`,
       timestamp: new Date().toISOString()
-    })
+    }
     
-    showToast(`${application.templeName} application has been rejected`, 'success')
+    recentActivities.value.unshift(newActivity)
+    
+    toast.success(`${application.templeName} application has been rejected`)
+    closeRejectModal()
+  } catch (error) {
+    console.error('Error rejecting temple:', error)
+    toast.error('Failed to reject temple. Please try again.')
+  } finally {
+    isProcessing.value = false
   }
-  
-  closeRejectModal()
 }
 
 const getStatusBadgeClass = (status) => {
@@ -610,6 +677,8 @@ const getActivityIconPath = (type) => {
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  
   const date = new Date(dateString)
   return date.toLocaleDateString('en-IN', {
     year: 'numeric',
@@ -620,15 +689,9 @@ const formatDate = (dateString) => {
   })
 }
 
-const showToast = (message, type = 'info') => {
-  // This would integrate with your toast system
-  // For now, using basic alert
-  console.log(`${type.toUpperCase()}: ${message}`)
-}
-
 // Lifecycle
-onMounted(() => {
-  // Initialize component
-  console.log('Super Admin Dashboard mounted')
-});
+onMounted(async () => {
+  // Load initial data
+  await refreshData()
+})
 </script>

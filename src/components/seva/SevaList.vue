@@ -7,15 +7,6 @@
           <h2 class="text-xl font-semibold text-white">Seva Management</h2>
           <p class="text-indigo-100 text-sm mt-1">Manage and approve seva bookings</p>
         </div>
-        <!-- <button
-          @click="$emit('create-seva')"
-          class="inline-flex items-center px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600 transition-all duration-200 font-medium text-sm"
-        >
-          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          Add New Seva
-        </button> -->
       </div>
     </div>
 
@@ -135,42 +126,47 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center">
                 <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-  <span class="text-sm font-medium text-indigo-700">
-    {{ getInitials(seva.devotee?.name) || 'NA' }}
-  </span>
-</div>  
+                  <span class="text-sm font-medium text-indigo-700">
+                    {{ getInitials(seva.devotee?.name) || getInitials(seva.name) || 'NA' }}
+                  </span>
+                </div>  
                 <div class="ml-3">
-                  <div class="text-sm font-medium text-gray-900">{{ seva.devotee.name }}</div>
-                  <div class="text-sm text-gray-500">{{ seva.devotee.phone }}</div>
+                  <div class="text-sm font-medium text-gray-900">{{ seva.devotee?.name || 'Not Assigned' }}</div>
+                  <div class="text-sm text-gray-500">{{ seva.devotee?.phone || 'No Contact' }}</div>
                 </div>
               </div>
             </td>
 
             <!-- Seva Details Column -->
             <td class="px-6 py-4">
-              <div class="text-sm font-medium text-gray-900">{{ seva.name }}</div>
-              <div class="text-sm text-gray-500">{{ seva.type }}</div>
-              <div class="text-xs text-gray-400 mt-1" v-if="seva.notes">{{ seva.notes }}</div>
+              <div class="text-sm font-medium text-gray-900">{{ seva.name || 'Unnamed Seva' }}</div>
+              <div class="text-sm text-gray-500">{{ seva.type || 'Not Categorized' }}</div>
+              <div class="text-xs text-gray-400 mt-1" v-if="seva.notes || seva.description">
+                {{ seva.notes || seva.description }}
+              </div>
             </td>
 
             <!-- Date & Time Column -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ formatDate(seva.date) }}</div>
-              <div class="text-sm text-gray-500">{{ seva.time }}</div>
+              <div class="text-sm text-gray-900">{{ seva.date ? formatDate(seva.date) : 'No Date' }}</div>
+              <div class="text-sm text-gray-500">{{ seva.time || 'No Time' }}</div>
             </td>
 
             <!-- Amount Column -->
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm font-medium text-gray-900">
-                ₹{{ seva.amount.toLocaleString() }}
+                ₹{{ (seva.amount || seva.price || 0).toLocaleString() }}
               </div>
             </td>
 
             <!-- Status Column -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <span :class="getStatusClass(seva.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                <span :class="getStatusDotClass(seva.status)" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
-                {{ seva.status.charAt(0).toUpperCase() + seva.status.slice(1) }}
+              <span 
+                :class="getStatusClass(seva.status || 'pending')" 
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              >
+                <span :class="getStatusDotClass(seva.status || 'pending')" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
+                {{ (seva.status || 'pending').charAt(0).toUpperCase() + (seva.status || 'pending').slice(1) }}
               </span>
             </td>
 
@@ -201,7 +197,7 @@
                 </button>
 
                 <!-- Approve/Reject for Pending -->
-                <div v-if="seva.status === 'pending'" class="flex items-center gap-1">
+                <div v-if="(seva.status || 'pending') === 'pending'" class="flex items-center gap-1">
                   <button
                     @click="$emit('approve-seva', seva)"
                     class="text-green-600 hover:text-green-900 transition-colors duration-150"
@@ -224,7 +220,7 @@
 
                 <!-- Complete Button for Approved -->
                 <button
-                  v-if="seva.status === 'approved'"
+                  v-if="(seva.status || 'pending') === 'approved'"
                   @click="$emit('complete-seva', seva)"
                   class="text-blue-600 hover:text-blue-900 transition-colors duration-150"
                   title="Mark Complete"
@@ -405,7 +401,7 @@ export default {
     const sevasList = computed(() => props.sevas.length > 0 ? props.sevas : mockSevas.value)
 
     const filteredSevas = computed(() => {
-      let filtered = sevasList.value
+      let filtered = sevasList.value || []
 
       if (filters.value.date) {
         filtered = filtered.filter(seva => seva.date === filters.value.date)
@@ -422,9 +418,9 @@ export default {
       if (filters.value.search) {
         const search = filters.value.search.toLowerCase()
         filtered = filtered.filter(seva => 
-          seva.devotee.name.toLowerCase().includes(search) ||
-          seva.name.toLowerCase().includes(search) ||
-          seva.type.toLowerCase().includes(search)
+          (seva.devotee?.name || '').toLowerCase().includes(search) ||
+          (seva.name || '').toLowerCase().includes(search) ||
+          (seva.type || '').toLowerCase().includes(search)
         )
       }
 
@@ -432,28 +428,35 @@ export default {
     })
 
     const stats = computed(() => {
-      const total = sevasList.value.length
-      const pending = sevasList.value.filter(s => s.status === 'pending').length
-      const approved = sevasList.value.filter(s => s.status === 'approved').length
-      const completed = sevasList.value.filter(s => s.status === 'completed').length
+      const list = sevasList.value || []
+      const total = list.length
+      const pending = list.filter(s => (s.status || 'pending') === 'pending').length
+      const approved = list.filter(s => s.status === 'approved').length
+      const completed = list.filter(s => s.status === 'completed').length
 
       return { total, pending, approved, completed }
     })
 
     const getInitials = (name) => {
-  if (!name || typeof name !== 'string') return ''; // return empty if name is missing
-  return name.split(' ').map(n => n[0]).join('').toUpperCase();
-};
-
-
+      if (!name || typeof name !== 'string') return ''; 
+      return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
 
     const formatDate = (dateString) => {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      })
+      if (!dateString) return 'No Date';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        
+        return date.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return 'Error';
+      }
     }
 
     const getStatusClass = (status) => {

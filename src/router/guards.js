@@ -3,6 +3,21 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 
 /**
+ * Role mapping - map backend roles to frontend roles
+ * This will handle the discrepancy between backend and frontend role names
+ */
+const roleMapping = {
+  'templeadmin': 'tenant', // Backend returns 'templeadmin', but routes expect 'tenant'
+}
+
+/**
+ * Get mapped role (or original if no mapping exists)
+ */
+function getMappedRole(role) {
+  return roleMapping[role] || role
+}
+
+/**
  * Authentication Guard
  * Checks if user is authenticated before accessing protected routes
  */
@@ -32,7 +47,9 @@ export function requireGuest(to, from, next) {
   const authStore = useAuthStore()
   
   if (authStore.isAuthenticated) {
-    const redirectPath = getDefaultRoute(authStore.user?.role)
+    // Use mapped role for redirection
+    const mappedRole = getMappedRole(authStore.user?.role)
+    const redirectPath = getDefaultRoute(mappedRole)
     next({ path: redirectPath })
     return false
   }
@@ -59,9 +76,11 @@ export function requireRole(roles) {
     }
     
     const userRole = authStore.user?.role
+    const mappedRole = getMappedRole(userRole)
     
-    if (!roles.includes(userRole)) {
-      showToast('You do not have permission to access this page', 'error')
+    // Check if mapped role is included in required roles
+    if (!roles.includes(mappedRole)) {
+      showToast(`Access denied: User has role "${userRole}" but route requires one of: ${roles.join(', ')}`, 'error')
       next({ name: 'Unauthorized' })
       return
     }
@@ -87,9 +106,11 @@ export function checkRole(to, from, next, requiredRole) {
   }
   
   const userRole = authStore.user?.role
+  const mappedRole = getMappedRole(userRole)
   
-  if (userRole !== requiredRole) {
-    showToast('You do not have permission to access this page', 'error')
+  // Compare mapped role with required role
+  if (mappedRole !== requiredRole) {
+    showToast(`Access denied: User has role "${userRole}" but route requires: ${requiredRole}`, 'error')
     next({ name: 'Unauthorized' })
     return
   }
@@ -110,7 +131,9 @@ export function checkProfileCompleted(to, from, next) {
     return
   }
   
-  if (authStore.user?.role !== 'devotee') {
+  const mappedRole = getMappedRole(authStore.user?.role)
+  
+  if (mappedRole !== 'devotee') {
     next({ name: 'Unauthorized' })
     return
   }
@@ -139,8 +162,10 @@ export function checkTempleApproved(to, from, next) {
     return
   }
   
+  const mappedRole = getMappedRole(authStore.user?.role)
+  
   // For tenant role
-  if (authStore.user?.role === 'tenant') {
+  if (mappedRole === 'tenant') {
     // Find the specific temple
     const temple = authStore.user?.temples?.find(t => t.id === templeId)
     
@@ -172,8 +197,17 @@ export function requireApprovedTenant(to, from, next) {
     return
   }
   
-  if (authStore.user?.role !== 'tenant') {
+  const mappedRole = getMappedRole(authStore.user?.role)
+  
+  if (mappedRole !== 'tenant') {
     next({ name: 'Unauthorized' })
+    return
+  }
+  
+  // DEVELOPMENT BYPASS: Skip approval check for templeadmin
+  if (authStore.user?.role === 'templeadmin') {
+    console.log("🔑 DEVELOPMENT: Bypassing approval check for templeadmin in route guard")
+    next()
     return
   }
   
@@ -199,8 +233,17 @@ export function requireTempleAccess(to, from, next) {
     return
   }
   
+  const mappedRole = getMappedRole(authStore.user?.role)
+  
   // For tenant - check if they own the temple
-  if (authStore.user?.role === 'tenant') {
+  if (mappedRole === 'tenant') {
+    // DEVELOPMENT BYPASS: Skip temple ownership check for templeadmin
+    if (authStore.user?.role === 'templeadmin') {
+      console.log("🔑 DEVELOPMENT: Bypassing temple ownership check for templeadmin")
+      next()
+      return
+    }
+    
     const hasAccess = authStore.user?.temples?.some(temple => temple.id === templeId)
     if (!hasAccess) {
       next({ name: 'Unauthorized' })
@@ -209,7 +252,7 @@ export function requireTempleAccess(to, from, next) {
   }
   
   // For devotee/volunteer - check if they're associated with the temple
-  if (['devotee', 'volunteer'].includes(authStore.user?.role)) {
+  if (['devotee', 'volunteer'].includes(mappedRole)) {
     if (authStore.user?.templeId !== templeId) {
       next({ name: 'Unauthorized' })
       return
@@ -247,6 +290,7 @@ export function requirePermission(permission) {
 export function getDefaultRoute(role) {
   const routes = {
     tenant: '/tenant/dashboard',
+    templeadmin: '/tenant/dashboard', // Add mapping for templeadmin
     devotee: '/devotee/temple-selection',
     volunteer: '/volunteer/temple-selection',
     superadmin: '/superadmin/dashboard',
@@ -267,9 +311,19 @@ export function canAccessRoute(route, user) {
     return false
   }
   
-  // Check role requirements
+  // Get mapped role
+  const mappedRole = getMappedRole(user?.role)
+  
+  // Check role requirements - handles both 'roles' (plural) and 'role' (singular)
   if (route.meta.roles && user) {
-    return route.meta.roles.includes(user.role)
+    return route.meta.roles.includes(mappedRole) || 
+           (user.role === 'templeadmin' && route.meta.roles.includes('tenant'))
+  }
+  
+  // Also check for singular 'role' in meta (for backward compatibility)
+  if (route.meta.role && user) {
+    return route.meta.role === mappedRole || 
+           (user.role === 'templeadmin' && route.meta.role === 'tenant')
   }
   
   // Check specific permissions
@@ -329,7 +383,8 @@ export const routeValidators = {
  */
 export const navigationHelpers = {
   goToDefaultRoute: (router, user) => {
-    const defaultRoute = getDefaultRoute(user?.role)
+    const mappedRole = getMappedRole(user?.role)
+    const defaultRoute = getDefaultRoute(mappedRole)
     router.push(defaultRoute)
   },
   

@@ -178,7 +178,8 @@
           <div v-if="tenant.status === 'PENDING'" class="flex flex-col sm:flex-row gap-3">
             <button
               @click="openApprovalModal(tenant)"
-              class="flex-1 sm:flex-none px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              :disabled="isProcessing"
+              class="flex-1 sm:flex-none px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -188,7 +189,8 @@
             
             <button
               @click="openRejectionModal(tenant)"
-              class="flex-1 sm:flex-none px-6 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              :disabled="isProcessing"
+              class="flex-1 sm:flex-none px-6 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -395,6 +397,11 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useToast } from '@/composables/useToast'
+import { apiClient } from '@/plugins/axios'
+
+// Toast notifications
+const toast = useToast()
 
 // Reactive data
 const isLoading = ref(true)
@@ -417,68 +424,8 @@ const rejectionModal = ref({
   notes: ''
 })
 
-// Mock data - replace with actual API calls
-const tenants = ref([
-  {
-    id: 1,
-    fullName: 'Raj Kumar Sharma',
-    email: 'raj.sharma@email.com',
-    phone: '+91 9876543210',
-    status: 'PENDING',
-    createdAt: '2024-06-15T10:30:00Z',
-    updatedAt: '2024-06-15T10:30:00Z',
-    temple: {
-      name: 'Sri Venkateshwara Temple',
-      type: 'Hindu Temple',
-      address: '123 Temple Street, MG Road',
-      city: 'Bangalore',
-      state: 'Karnataka'
-    },
-    documents: [
-      { id: 1, name: 'Registration Certificate.pdf', url: '#' },
-      { id: 2, name: 'Trust Documents.pdf', url: '#' }
-    ]
-  },
-  {
-    id: 2,
-    fullName: 'Priya Devi',
-    email: 'priya.devi@email.com', 
-    phone: '+91 9876543211',
-    status: 'APPROVED',
-    createdAt: '2024-06-14T14:20:00Z',
-    updatedAt: '2024-06-16T09:15:00Z',
-    temple: {
-      name: 'Lakshmi Narayan Mandir',
-      type: 'Hindu Temple',
-      address: '456 Devotion Lane, Indiranagar',
-      city: 'Bangalore',
-      state: 'Karnataka'
-    },
-    documents: [
-      { id: 3, name: 'Temple Registration.pdf', url: '#' }
-    ]
-  },
-  {
-    id: 3,
-    fullName: 'Arun Krishnan',
-    email: 'arun.krishnan@email.com',
-    phone: '+91 9876543212',
-    status: 'REJECTED',
-    createdAt: '2024-06-13T16:45:00Z',
-    updatedAt: '2024-06-14T11:30:00Z',
-    rejectionNotes: 'Incomplete documentation provided. Missing trust deed and land ownership documents.',
-    temple: {
-      name: 'Ganesha Temple',
-      type: 'Hindu Temple', 
-      address: '789 Spiritual Path, Koramangala',
-      city: 'Bangalore',
-      state: 'Karnataka'
-    },
-    documents: [
-      { id: 4, name: 'Basic Registration.pdf', url: '#' }
-    ]
-  }
-])
+// Data store
+const tenants = ref([])
 
 // Computed properties
 const filteredTenants = computed(() => {
@@ -575,6 +522,7 @@ const getStatusBadgeClass = (status) => {
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
   const date = new Date(dateString)
   return date.toLocaleDateString('en-IN', {
     year: 'numeric',
@@ -626,23 +574,22 @@ const approveTenant = async () => {
   isProcessing.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Call API to approve tenant
+    await apiClient.admin.approveTenant(approvalModal.value.tenant.id, 'Approved by Super Admin')
     
-    // Update tenant status
+    // Update tenant status in local state
     const tenantIndex = tenants.value.findIndex(t => t.id === approvalModal.value.tenant.id)
     if (tenantIndex !== -1) {
       tenants.value[tenantIndex].status = 'APPROVED'
       tenants.value[tenantIndex].updatedAt = new Date().toISOString()
     }
     
-    // Show success message (you can implement toast notification here)
-    console.log('Tenant approved successfully')
+    toast.success(`Tenant ${approvalModal.value.tenant.fullName} approved successfully`)
     
     closeApprovalModal()
   } catch (error) {
     console.error('Error approving tenant:', error)
-    // Handle error (you can implement error toast here)
+    toast.error('Failed to approve tenant. Please try again.')
   } finally {
     isProcessing.value = false
   }
@@ -654,10 +601,10 @@ const rejectTenant = async () => {
   isProcessing.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Call API to reject tenant
+    await apiClient.admin.rejectTenant(rejectionModal.value.tenant.id, rejectionModal.value.notes)
     
-    // Update tenant status
+    // Update tenant status in local state
     const tenantIndex = tenants.value.findIndex(t => t.id === rejectionModal.value.tenant.id)
     if (tenantIndex !== -1) {
       tenants.value[tenantIndex].status = 'REJECTED'
@@ -665,45 +612,69 @@ const rejectTenant = async () => {
       tenants.value[tenantIndex].updatedAt = new Date().toISOString()
     }
     
-    // Show success message (you can implement toast notification here)
-    console.log('Tenant rejected successfully')
+    toast.success(`Tenant ${rejectionModal.value.tenant.fullName} rejected successfully`)
     
     closeRejectionModal()
   } catch (error) {
     console.error('Error rejecting tenant:', error)
-    // Handle error (you can implement error toast here)
+    toast.error('Failed to reject tenant. Please try again.')
   } finally {
     isProcessing.value = false
   }
 }
 
 const viewDocument = (document) => {
-  // Implement document viewing logic
-  // This could open a modal or redirect to document viewer
-  console.log('Viewing document:', document.name)
-  window.open(document.url, '_blank')
+  // Open document in new tab if URL is available
+  if (document.url) {
+    window.open(document.url, '_blank')
+  } else {
+    toast.info('Document preview not available')
+  }
 }
 
 const viewTenantDetails = (tenant) => {
-  // Implement detailed view logic
   // This could open a modal or navigate to detailed view
-  console.log('Viewing tenant details:', tenant.fullName)
+  // For now, just show a toast
+  toast.info(`Viewing details for ${tenant.fullName}`)
+  
+  // In a real implementation, you might navigate to a details page
+  // router.push(`/superadmin/tenants/${tenant.id}`)
 }
 
 const loadTenants = async () => {
   isLoading.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Call API to get pending tenants
+    const response = await apiClient.admin.getPendingTenants()
     
-    // In real implementation, fetch data from API
-    // const response = await superadminService.getTenantApplications()
-    // tenants.value = response.data
-    
+    if (response.data) {
+      // Map API response to expected format
+      tenants.value = response.data.map(tenant => ({
+        id: tenant.id,
+        fullName: tenant.fullName,
+        email: tenant.email,
+        phone: tenant.phone,
+        status: tenant.status, // Should be 'PENDING', 'APPROVED', or 'REJECTED'
+        createdAt: tenant.createdAt,
+        updatedAt: tenant.updatedAt,
+        rejectionNotes: tenant.rejectionNotes,
+        temple: tenant.temple ? {
+          name: tenant.temple.name,
+          type: tenant.temple.type || 'Hindu Temple',
+          address: tenant.temple.address,
+          city: tenant.temple.city,
+          state: tenant.temple.state
+        } : null,
+        documents: tenant.documents || []
+      }))
+    }
   } catch (error) {
     console.error('Error loading tenants:', error)
-    // Handle error
+    toast.error('Failed to load tenant applications. Please try again.')
+    
+    // Fallback to empty array
+    tenants.value = []
   } finally {
     isLoading.value = false
   }

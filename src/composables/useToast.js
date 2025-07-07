@@ -33,34 +33,29 @@ export const useToast = () => {
     }
   }
 
-  // Main toast function - can handle both the original function signature and the newer one
-  const showToast = (options) => {
+  // Main toast function - using regular function instead of arrow function
+  // so it has access to the arguments object
+  function showToast(message, type = 'info', duration = 5000) {
     // Handle both formats:
-    // showToast('message', 'SUCCESS', 5000) and
-    // showToast({ type: 'success', message: 'Hello', duration: 5000 })
+    // 1. showToast('message', 'success', 5000)
+    // 2. showToast({ message: 'Hello', type: 'success', duration: 5000 })
     
-    let message, type, duration;
+    let finalMessage, finalType, finalDuration;
     
-    if (typeof options === 'object') {
+    if (typeof message === 'object') {
       // New format with options object
-      message = options.message;
-      // Convert type to uppercase to match TOAST_TYPES keys
-      type = (options.type || 'info').toUpperCase();
-      duration = options.duration || 5000;
+      finalMessage = message.message;
+      finalType = (message.type || 'info').toUpperCase();
+      finalDuration = message.duration || 5000;
     } else {
       // Old format with separate arguments
-      message = options;
-      type = arguments[1] || 'INFO';
-      duration = arguments[2] || 5000;
+      finalMessage = message;
+      finalType = (type || 'info').toUpperCase();
+      finalDuration = duration;
     }
     
-    // Make sure type is uppercase
-    if (typeof type === 'string' && type.toUpperCase() !== type) {
-      type = type.toUpperCase();
-    }
-    
-    return addToast(message, type, duration);
-  };
+    return addToast(finalMessage, finalType, finalDuration);
+  }
 
   const addToast = (message, type = 'INFO', duration = 5000) => {
     const id = ++toastId
@@ -113,38 +108,15 @@ export const useToast = () => {
     return addToast(message, 'INFO', duration)
   }
 
-  // For API responses
-  const handleApiResponse = (response, successMessage = 'Operation completed successfully') => {
-    if (response.success) {
-      success(successMessage)
-    } else {
-      error(response.message || 'Something went wrong')
-    }
-  }
-
-  // For form submissions
-  const handleFormSubmit = async (submitFn, successMessage = 'Form submitted successfully') => {
-    try {
-      const result = await submitFn()
-      success(successMessage)
-      return result
-    } catch (error) {
-      error(error.message || 'Form submission failed')
-      throw error
-    }
-  }
-
   return {
     // State
-    toasts: toasts,
+    toasts,
     
     // Methods
+    showToast,
     addToast,
     removeToast,
     clearAllToasts,
-    
-    // Added to fix the error with showToast not being a function
-    showToast,
     
     // Convenience methods
     success,
@@ -152,16 +124,10 @@ export const useToast = () => {
     warning,
     info,
     
-    // Helper methods
-    handleApiResponse,
-    handleFormSubmit,
-    
     // Constants
     TOAST_TYPES
   }
 }
 
-// Create and export a singleton instance for global use
-// This ensures components can use the same toast instance
-const toastInstance = useToast();
-export default toastInstance;
+// Create and export a singleton instance
+export default useToast();
