@@ -21,7 +21,7 @@ import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 // Tenant Views
 import TenantDashboard from '@/views/tenant/TenantDashboard.vue'
 import CreateTemple from '@/views/tenant/CreateTemple.vue'
-import ManageTemples from '@/views/tenant/ManageTemples.vue'
+// import ManageTemples from '@/views/tenant/ManageTemples.vue'
 import EditTemple from '@/views/tenant/EditTemple.vue'
 import TempleDetails from '@/views/tenant/TempleDetails.vue'  // Add import for TempleDetails
 
@@ -197,15 +197,15 @@ const routes = [
           breadcrumb: 'Create Temple'
         }
       },
-      {
-        path: 'entities',
-        name: 'ManageTemples',
-        component: ManageTemples,
-        meta: { 
-          title: 'Manage Temples',
-          breadcrumb: 'Manage Temples'
-        }
-      },
+      // {
+      //   path: 'entities',
+      //   name: 'ManageTemples',
+      //   component: ManageTemples,
+      //   meta: { 
+      //     title: 'Manage Temples',
+      //     breadcrumb: 'Manage Temples'
+      //   }
+      // },
       {
         path: 'entities/:id',
         name: 'TempleDetails',

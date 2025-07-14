@@ -317,18 +317,18 @@ const tabs = computed(() => [
     icon: FileText,
     count: stats.activeTemplates
   },
-  { 
-    id: 'history', 
-    name: 'History', 
-    icon: Clock,
-    count: stats.totalMessages
-  },
-  { 
-    id: 'analytics', 
-    name: 'Analytics', 
-    icon: BarChart3,
-    count: null
-  }
+  // { 
+  //   id: 'history', 
+  //   name: 'History', 
+  //   icon: Clock,
+  //   count: stats.totalMessages
+  // },
+  // { 
+  //   id: 'analytics', 
+  //   name: 'Analytics', 
+  //   icon: BarChart3,
+  //   count: null
+  // }
 ])
 
 // Popular templates data

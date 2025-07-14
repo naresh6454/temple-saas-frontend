@@ -13,6 +13,9 @@ export default {
       // Normalize data structure for frontend components
       const normalizedTemples = Array.isArray(response) ? response.map(this.normalizeTempleData) : [];
       
+      // Debug log the normalized temples
+      console.log('Normalized temples:', normalizedTemples)
+      
       return normalizedTemples
     } catch (error) {
       console.error('Raw API error:', error)
@@ -43,8 +46,12 @@ export default {
   normalizeTempleData(temple) {
     if (!temple) return null;
     
+    // Log the raw temple data from backend
+    console.log('Normalizing temple:', temple)
+    console.log('Original status:', temple.Status || temple.status)
+    
     // Handle potential null or undefined values with fallbacks
-    return {
+    const normalizedTemple = {
       id: temple.ID || temple.id || 0,
       name: temple.Name || temple.name || '',
       description: temple.Description || temple.description || '',
@@ -57,7 +64,8 @@ export default {
       country: temple.Country || temple.country || 'India',
       phone: temple.Phone || temple.phone || '',
       email: temple.Email || temple.email || '',
-      status: (temple.Status || temple.status || 'pending').toUpperCase(),
+      // IMPORTANT: Use the original case for status - don't convert to uppercase
+      status: temple.Status || temple.status || 'pending',
       createdAt: temple.CreatedAt || temple.created_at || null,
       updatedAt: temple.UpdatedAt || temple.updated_at || null,
       main_deity: temple.MainDeity || temple.main_deity || '',
@@ -80,6 +88,9 @@ export default {
         website: temple.Website || temple.website || ''
       }
     }
+    
+    console.log('Normalized temple:', normalizedTemple)
+    return normalizedTemple
   },
   
   /**

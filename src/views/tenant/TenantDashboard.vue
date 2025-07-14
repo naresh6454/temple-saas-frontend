@@ -35,20 +35,20 @@
               <div class="flex items-center">
                 <div :class="[
                   'w-3 h-3 rounded-full mr-2',
-                  userStore.user?.status === 'APPROVED' ? 'bg-green-400' : 
-                  userStore.user?.status === 'REJECTED' ? 'bg-red-400' : 'bg-yellow-400'
+                  isUserApproved ? 'bg-green-400' : 
+                  isUserRejected ? 'bg-red-400' : 'bg-yellow-400'
                 ]"></div>
                 <span class="text-indigo-100">Account Status: </span>
-                <span class="font-semibold ml-1">{{ userStore.user?.status || 'PENDING' }}</span>
+                <span class="font-semibold ml-1">{{ userStore.user?.status || 'pending' }}</span>
               </div>
             </div>
              -->
             <!-- Status message for non-approved tenants -->
-            <div v-if="userStore.user?.status !== 'APPROVED'" class="mt-3 bg-yellow-400 bg-opacity-20 px-3 py-2 rounded-lg text-yellow-100">
-              <span v-if="userStore.user?.status === 'PENDING'">
+            <div v-if="!isUserApproved" class="mt-3 bg-yellow-400 bg-opacity-20 px-3 py-2 rounded-lg text-yellow-100">
+              <span v-if="isUserPending">
                 Your account is pending approval from the administrator. You'll be notified once approved.
               </span>
-              <span v-else-if="userStore.user?.status === 'REJECTED'">
+              <span v-else-if="isUserRejected">
                 Your account has been rejected. Please contact the administrator for more information.
               </span>
             </div>
@@ -190,8 +190,9 @@
                   Edit
                 </button>
 
+                <!-- Manage Button - UPDATED TO ONLY CHECK TEMPLE STATUS -->
                 <button
-                  v-if="temple.status === 'APPROVED' && userStore.user?.status === 'APPROVED'"
+                  v-if="isTempleApproved(temple)"
                   @click="manageTemple(temple)"
                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors duration-200"
                 >
@@ -200,14 +201,12 @@
                   </svg>
                   Manage
                 </button>
-                <div v-else-if="userStore.user?.status !== 'APPROVED'" class="text-sm text-gray-500 italic">
-                  Tenant approval required
-                </div>
+                <!-- Removed conditional showing "Tenant approval required" -->
               </div>
             </div>
 
             <!-- Rejection Notes (if rejected) -->
-            <div v-if="temple.status === 'REJECTED' && temple.adminNotes" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div v-if="isTempleRejected(temple) && temple.adminNotes" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div class="flex items-start">
                 <svg class="w-5 h-5 text-red-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -263,6 +262,38 @@ const templeStore = useTempleStore()
 const userStore = useAuthStore()
 const { showToast } = useToast()
 
+// Status check helper functions
+const isTempleApproved = (temple) => {
+  const status = (temple.status || '').toString().toLowerCase()
+  return status === 'approved'
+}
+
+const isTempleRejected = (temple) => {
+  const status = (temple.status || '').toString().toLowerCase()
+  return status === 'rejected'
+}
+
+const isTemplePending = (temple) => {
+  const status = (temple.status || '').toString().toLowerCase()
+  return status === 'pending'
+}
+
+// User status helper computed properties
+const isUserApproved = computed(() => {
+  const status = (userStore.user?.status || '').toString().toLowerCase()
+  return status === 'approved'
+})
+
+const isUserRejected = computed(() => {
+  const status = (userStore.user?.status || '').toString().toLowerCase()
+  return status === 'rejected'
+})
+
+const isUserPending = computed(() => {
+  const status = (userStore.user?.status || '').toString().toLowerCase()
+  return status === 'pending' || !status
+})
+
 // Get the tenant ID from route params or auth store
 const tenantId = computed(() => {
   // First try to get from route params
@@ -290,11 +321,11 @@ const resetTempleData = () => {
 
 // Computed properties
 const approvedTemplesCount = computed(() => {
-  return templeStore.temples.filter(temple => temple.status === 'APPROVED').length
+  return templeStore.temples.filter(temple => isTempleApproved(temple)).length
 })
 
 const pendingTemplesCount = computed(() => {
-  return templeStore.temples.filter(temple => temple.status === 'PENDING').length
+  return templeStore.temples.filter(temple => isTemplePending(temple)).length
 })
 
 // Methods
@@ -362,10 +393,10 @@ onMounted(async () => {
   await loadTempleData()
   
   // Check if tenant is pending approval
-  if (userStore.user?.status === 'PENDING') {
+  if (isUserPending.value) {
     // Show notification about pending status
     showToast('Your account is pending approval from the administrator.', 'info')
-  } else if (userStore.user?.status === 'REJECTED') {
+  } else if (isUserRejected.value) {
     showToast('Your account has been rejected. Please contact support.', 'error')
   }
 })

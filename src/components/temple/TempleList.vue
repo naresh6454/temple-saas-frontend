@@ -3,283 +3,248 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900">My Temples</h2>
-        <p class="text-gray-600 mt-1">Manage all your temple registrations</p>
+        <h2 class="text-2xl font-bold text-gray-900">Your Temples</h2>
+        <p class="text-gray-600 mt-1">Manage and track your temple applications</p>
       </div>
-      <router-link
-        to="/tenant/entities/create"
-        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Create New Temple
-      </router-link>
-    </div>
-
-    <!-- Search and Filter -->
-    <div class="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-      <div class="flex flex-col sm:flex-row gap-4">
-        <div class="flex-1">
-          <div class="relative">
-            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search temples by name, city..."
-              class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-            />
-          </div>
-        </div>
-        <div class="flex gap-3">
-          <select
-            v-model="statusFilter"
-            class="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-white"
-          >
-            <option value="">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-          <button
-            @click="clearFilters"
-            class="px-4 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="filteredTemples.length === 0 && !loading" class="text-center py-12">
-      <div class="bg-white rounded-2xl shadow-md p-12 border border-gray-100">
-        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No temples found</h3>
-        <p class="text-gray-600 mb-6">
-          {{ searchQuery || statusFilter ? 'No temples match your search criteria.' : 'Start by creating your first temple.' }}
-        </p>
+      <div class="flex space-x-2">
+        <button
+          @click="showDebugPanel = !showDebugPanel"
+          class="px-3 py-1 bg-amber-600 text-white rounded text-sm"
+        >
+          Debug Panel
+        </button>
         <router-link
-          v-if="!searchQuery && !statusFilter"
           to="/tenant/entities/create"
-          class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+          class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Create Your First Temple
+          Add Temple
         </router-link>
       </div>
     </div>
 
-    <!-- Temple Grid -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <TempleCard
-        v-for="temple in filteredTemples"
-        :key="temple.id"
-        :temple="temple"
-        @view="handleViewTemple"
-        @edit="handleEditTemple"
-        @delete="handleDeleteTemple"
-      />
+    <!-- Temple List -->
+    <div v-for="temple in temples" :key="temple.id" class="bg-white rounded-lg shadow mb-4 overflow-hidden">
+      <!-- Temple Header -->
+      <div class="p-4">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-xl font-bold text-gray-900">{{ temple.name }}</h3>
+          <div>
+            <span 
+              v-if="isApproved(temple)" 
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+            >
+              Approved
+            </span>
+            <span 
+              v-else-if="isRejected(temple)" 
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+            >
+              Rejected
+            </span>
+            <span 
+              v-else 
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+            >
+              Pending
+            </span>
+          </div>
+        </div>
+        
+        <!-- Address -->
+        <div class="text-sm text-gray-600 mb-3">
+          {{ getAddressString(temple) }}
+        </div>
+        
+        <!-- Created Date -->
+        <div class="text-xs text-gray-500">
+          <div class="flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Created: {{ formatDate(temple.created_at) }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex border-t border-gray-200">
+        <button
+          @click="handleViewTemple(temple)"
+          class="flex-1 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <span class="flex items-center justify-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            View
+          </span>
+        </button>
+        
+        <button
+          @click="handleEditTemple(temple)"
+          class="flex-1 py-3 text-gray-700 hover:bg-gray-50 transition-colors border-l border-gray-200"
+        >
+          <span class="flex items-center justify-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            Edit
+          </span>
+        </button>
+
+        <!-- Manage Button -->
+        <button
+          v-if="isApproved(temple)"
+          @click="handleManageTemple(temple)"
+          class="flex-1 py-3 text-indigo-700 font-medium hover:bg-indigo-50 transition-colors border-l border-gray-200"
+        >
+          <span class="flex items-center justify-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Manage
+          </span>
+        </button>
+      </div>
+      
+      <!-- Tenant Approval Required Message -->
+      <div class="p-2 text-xs text-center text-gray-500 italic border-t border-gray-200">
+        {{ isApproved(temple) ? '' : 'Tenant approval required' }}
+      </div>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center">
-      <nav class="flex items-center space-x-2">
-        <button
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-          class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-        >
-          Previous
-        </button>
-        
-        <button
-          v-for="page in visiblePages"
-          :key="page"
-          :class="[
-            'px-3 py-2 rounded-lg transition-all duration-200',
-            page === currentPage
-              ? 'bg-indigo-600 text-white'
-              : 'border border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-          ]"
-          @click="currentPage = page"
-        >
-          {{ page }}
-        </button>
-        
-        <button
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-          class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-        >
-          Next
-        </button>
-      </nav>
-    </div>
+    <!-- Debug Panel -->
+    <TempleDebug 
+      v-if="showDebugPanel"
+      :temples="temples"
+      @close="showDebugPanel = false"
+      @update="forceUpdate++"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
-import TempleCard from './TempleCard.vue'
+import { useTempleStore } from '@/stores/temple'
+import TempleDebug from './TempleDebug.vue'
 
 const router = useRouter()
 const { showToast } = useToast()
+const templeStore = useTempleStore()
 
 // Reactive data
 const temples = ref([])
 const loading = ref(true)
-const searchQuery = ref('')
-const statusFilter = ref('')
-const currentPage = ref(1)
-const itemsPerPage = 9
+const showDebugPanel = ref(false)
+const forceUpdate = ref(0)
 
-// Mock data - replace with actual API call
-const mockTemples = [
-  {
-    id: 1,
-    name: 'Sri Venkateswara Temple',
-    location: 'Tirupati, Andhra Pradesh',
-    status: 'APPROVED',
-    createdAt: '2024-01-15',
-    devoteeCount: 1250,
-    image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&h=300&fit=crop'
-  },
-  {
-    id: 2,
-    name: 'Jagannath Temple',
-    location: 'Puri, Odisha',
-    status: 'PENDING',
-    createdAt: '2024-02-20',
-    devoteeCount: 0,
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop'
-  },
-  {
-    id: 3,
-    name: 'Meenakshi Temple',
-    location: 'Madurai, Tamil Nadu',
-    status: 'REJECTED',
-    createdAt: '2024-01-10',
-    devoteeCount: 0,
-    rejectionReason: 'Incomplete documentation provided',
-    image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400&h=300&fit=crop'
-  }
-]
+// Helper functions for status checks - already using case-insensitive comparison
+const isApproved = (temple) => {
+  const status = (temple.status || '').toString().toLowerCase()
+  return status === 'approved'
+}
 
-// Computed properties
-const filteredTemples = computed(() => {
-  let filtered = temples.value
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(temple =>
-      temple.name.toLowerCase().includes(query) ||
-      temple.location.toLowerCase().includes(query)
-    )
-  }
-
-  if (statusFilter.value) {
-    filtered = filtered.filter(temple => temple.status === statusFilter.value)
-  }
-
-  // Paginate
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filtered.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  let filtered = temples.value
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(temple =>
-      temple.name.toLowerCase().includes(query) ||
-      temple.location.toLowerCase().includes(query)
-    )
-  }
-
-  if (statusFilter.value) {
-    filtered = filtered.filter(temple => temple.status === statusFilter.value)
-  }
-
-  return Math.ceil(filtered.length / itemsPerPage)
-})
-
-const visiblePages = computed(() => {
-  const pages = []
-  const maxVisible = 5
-  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
-  let end = Math.min(totalPages.value, start + maxVisible - 1)
-
-  if (end - start + 1 < maxVisible) {
-    start = Math.max(1, end - maxVisible + 1)
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-
-  return pages
-})
+const isRejected = (temple) => {
+  const status = (temple.status || '').toString().toLowerCase()
+  return status === 'rejected'
+}
 
 // Methods
 const loadTemples = async () => {
   try {
     loading.value = true
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    temples.value = mockTemples
+    
+    // Use the temple store to fetch real data
+    await templeStore.fetchTemples()
+    temples.value = templeStore.temples
+    
+    console.log('Loaded temples:', JSON.stringify(temples.value, null, 2))
+    
+    // If using mock data for development
+    if (temples.value.length === 0) {
+      temples.value = [
+        {
+          id: 1,
+          name: 'Sri Venkateswara Temple',
+          main_deity: 'Lord Venkateswara',
+          temple_type: 'Vaishnavite',
+          status: 'approved',
+          created_at: '2023-01-15',
+          approved_at: '2023-01-20',
+          city: 'Tirupati',
+          state: 'Andhra Pradesh',
+          district: 'Chittoor',
+          phone: '9876543210',
+          email: 'info@tirumala.org',
+          street_address: '2nd street, Aditya nagar'
+        },
+        {
+          id: 2,
+          name: 'Jagannath Temple',
+          main_deity: 'Lord Jagannath',
+          temple_type: 'Vaishnavite',
+          status: 'pending',
+          created_at: '2023-02-20',
+          city: 'Puri',
+          state: 'Odisha',
+          district: 'Puri',
+          phone: '9876543211',
+          email: 'info@jagannath.org',
+          street_address: 'Temple Street'
+        }
+      ]
+    }
   } catch (error) {
+    console.error('Error loading temples:', error)
     showToast('Failed to load temples', 'error')
   } finally {
     loading.value = false
   }
 }
 
-const clearFilters = () => {
-  searchQuery.value = ''
-  statusFilter.value = ''
-  currentPage.value = 1
+const getAddressString = (temple) => {
+  return `${temple.street_address || ''}, ${temple.city || ''}, ${temple.state || ''}, ${temple.district || ''} ${temple.pincode || ''}`
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (e) {
+    return dateString
+  }
 }
 
 const handleViewTemple = (temple) => {
-  if (temple.status === 'APPROVED') {
-    router.push(`/entity/${temple.id}/dashboard`)
-  } else {
-    showToast('Temple must be approved to access dashboard', 'warning')
-  }
+  router.push(`/tenant/entities/${temple.id}`)
 }
 
 const handleEditTemple = (temple) => {
   router.push(`/tenant/entities/${temple.id}/edit`)
 }
 
-const handleDeleteTemple = async (temple) => {
-  if (confirm(`Are you sure you want to delete ${temple.name}?`)) {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      temples.value = temples.value.filter(t => t.id !== temple.id)
-      showToast('Temple deleted successfully', 'success')
-    } catch (error) {
-      showToast('Failed to delete temple', 'error')
-    }
-  }
+const handleManageTemple = (temple) => {
+  // Since we're already checking with v-if, we can be confident the temple is approved
+  router.push(`/entity/${temple.id}/dashboard`)
 }
+
+// Watch for updates to refresh the data
+watch(forceUpdate, () => {
+  console.log('Force update triggered')
+  loadTemples() // Also reload data when debug panel triggers an update
+})
 
 // Lifecycle
 onMounted(() => {

@@ -18,6 +18,13 @@ function getMappedRole(role) {
 }
 
 /**
+ * Helper function for case-insensitive status comparison
+ */
+function isStatusEqual(status1, status2) {
+  return (status1 || '').toString().toLowerCase() === (status2 || '').toString().toLowerCase()
+}
+
+/**
  * Authentication Guard
  * Checks if user is authenticated before accessing protected routes
  */
@@ -174,7 +181,8 @@ export function checkTempleApproved(to, from, next) {
       return
     }
     
-    if (temple.status !== 'APPROVED') {
+    // Case-insensitive status check
+    if (!isStatusEqual(temple.status, 'approved')) {
       showToast('This temple is pending approval. Please wait for admin approval.', 'warning')
       next({ name: 'EntityDashboard', params: { id: templeId } })
       return
@@ -204,8 +212,8 @@ export function requireApprovedTenant(to, from, next) {
     return
   }
   
-  // Remove development bypass and enforce approval check for all tenants
-  if (authStore.user?.status !== 'APPROVED') {
+  // Case-insensitive status check
+  if (!isStatusEqual(authStore.user?.status, 'approved')) {
     showToast('Your account is pending approval. Please wait for admin approval.', 'warning')
     next({ name: 'TenantDashboard' })
     return

@@ -8,6 +8,11 @@ import { useAuthStore } from '@/stores/auth'
 export function usePermissions() {
   const authStore = useAuthStore()
 
+  // Helper function for case-insensitive status comparison
+  const isStatusEqual = (status1, status2) => {
+    return (status1 || '').toString().toLowerCase() === (status2 || '').toString().toLowerCase()
+  }
+
   // User role and entity information
   const userRole = computed(() => authStore.user?.role)
   const userEntity = computed(() => authStore.user?.entityId)
@@ -19,10 +24,10 @@ export function usePermissions() {
   const isDevotee = computed(() => userRole.value === 'devotee')
   const isVolunteer = computed(() => userRole.value === 'volunteer')
 
-  // Status checks
-  const isApproved = computed(() => userStatus.value === 'APPROVED')
-  const isPending = computed(() => userStatus.value === 'PENDING')
-  const isRejected = computed(() => userStatus.value === 'REJECTED')
+  // Status checks - Updated to use case-insensitive comparison
+  const isApproved = computed(() => isStatusEqual(userStatus.value, 'approved'))
+  const isPending = computed(() => isStatusEqual(userStatus.value, 'pending'))
+  const isRejected = computed(() => isStatusEqual(userStatus.value, 'rejected'))
 
   // Entity-level permissions
   const canManageEntity = computed(() => {
@@ -355,6 +360,7 @@ export function usePermissions() {
     hasAnyPermission,
     hasAllPermissions,
     getAllowedNavItems,
+    isStatusEqual,
 
     // User info
     userRole,

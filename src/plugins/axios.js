@@ -22,7 +22,7 @@ if (import.meta.env.DEV) {
   })
 }
 
-// Request interceptor - Add auth token
+// Request interceptor - Add auth token and tenant ID
 api.interceptors.request.use(
   (config) => {
     // Get token from localStorage
@@ -31,6 +31,17 @@ api.interceptors.request.use(
     // Set Authorization header if token exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    
+    // Add tenant ID header for proper tenant isolation
+    const tenantId = localStorage.getItem('current_tenant_id')
+    if (tenantId) {
+      config.headers['X-Tenant-ID'] = tenantId
+      
+      // Log tenant header in development
+      if (import.meta.env.DEV) {
+        console.log(`Request with Tenant ID: ${tenantId}`)
+      }
     }
     
     // Log request in development
@@ -75,7 +86,9 @@ api.interceptors.response.use(
           // Clear authentication data
           localStorage.removeItem('auth_token')
           localStorage.removeItem('user_data')
+          localStorage.removeItem('current_tenant_id')
           delete api.defaults.headers.common['Authorization']
+          delete api.defaults.headers.common['X-Tenant-ID']
           
           // Redirect to login if not already there
           if (!window.location.pathname.includes('/login')) {

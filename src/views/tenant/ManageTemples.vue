@@ -1,6 +1,6 @@
-<template>
+<!-- <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Page Header -->
+
     <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="py-6">
@@ -25,9 +25,9 @@
       </div>
     </div>
 
-    <!-- Main Content -->
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Stats Overview -->
+
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div class="flex items-center">
@@ -86,10 +86,10 @@
         </div>
       </div>
 
-      <!-- Filters and Search -->
+
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div class="flex flex-col sm:flex-row gap-4">
-          <!-- Search Input -->
+
           <div class="flex-1">
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -106,7 +106,6 @@
             </div>
           </div>
 
-          <!-- Status Filter -->
           <div class="sm:w-48">
             <select
               v-model="statusFilter"
@@ -119,7 +118,7 @@
             </select>
           </div>
 
-          <!-- Sort Options -->
+
           <div class="sm:w-48">
             <select
               v-model="sortBy"
@@ -134,20 +133,17 @@
         </div>
       </div>
 
-      <!-- Temples List -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">Your Temples</h3>
           <p class="text-sm text-gray-600 mt-1">{{ filteredTemples.length }} temples found</p>
         </div>
 
-        <!-- Loading State -->
         <div v-if="loading" class="p-8 text-center">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
           <p class="text-gray-600 mt-4">Loading temples...</p>
         </div>
 
-        <!-- Empty State -->
         <div v-else-if="filteredTemples.length === 0" class="p-8 text-center">
           <div class="w-16 h-16 mx-auto mb-4">
             <svg class="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +162,7 @@
           </router-link>
         </div>
 
-        <!-- Temples Grid -->
+
         <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
           <TempleCard
             v-for="temple in filteredTemples"
@@ -181,7 +177,6 @@
       </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <BaseModal
       v-if="showDeleteModal"
       @close="showDeleteModal = false"
@@ -338,4 +333,4 @@ error('Failed to delete temple')
 onMounted(() => {
   loadTemples()
 })
-</script>
+</script> -->

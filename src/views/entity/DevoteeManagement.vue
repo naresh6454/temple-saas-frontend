@@ -123,7 +123,7 @@
             <h3 class="mt-2 text-sm font-medium text-gray-900">No devotees found</h3>
             <p class="mt-1 text-sm text-gray-500">Get started by adding your first devotee.</p>
             <div class="mt-6">
-              <button 
+              <!-- <button 
                 @click="showAddDevoteeModal = true"
                 class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
               >
@@ -131,7 +131,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
                 Add First Devotee
-              </button>
+              </button> -->
             </div>
           </div>
         </div>

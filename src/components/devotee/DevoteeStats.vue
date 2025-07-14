@@ -146,7 +146,7 @@
     <!-- Detailed Statistics -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
       <!-- Demographics Chart -->
-      <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
+      <!-- <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
           <h3 class="text-lg font-semibold text-gray-900">Demographics</h3>
           <select
@@ -176,12 +176,12 @@
               <span class="text-sm text-gray-600">{{ item.count }}</span>
               <span class="text-xs text-gray-500">({{ item.percentage }}%)</span>
             </div>
-          </div>
-        </div>
-      </div>
+          </div> -->
+        <!-- </div>
+      </div> -->
 
       <!-- Activity Timeline -->
-      <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
+      <!-- <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
         
         <div class="space-y-4">
@@ -236,15 +236,14 @@
             View All Activities →
           </button>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Performance Metrics -->
-    <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
+    <!-- <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
       <h3 class="text-lg font-semibold text-gray-900 mb-6">Performance Metrics</h3>
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-        <!-- Engagement Rate -->
         <div class="text-center">
           <div class="relative inline-flex items-center justify-center w-20 h-20 mb-3">
             <svg class="w-20 h-20 transform -rotate-90">
@@ -276,7 +275,6 @@
           <p class="text-xs text-gray-500">Active in last 30 days</p>
         </div>
 
-        <!-- Retention Rate -->
         <div class="text-center">
           <div class="relative inline-flex items-center justify-center w-20 h-20 mb-3">
             <svg class="w-20 h-20 transform -rotate-90">
@@ -308,14 +306,13 @@
           <p class="text-xs text-gray-500">6-month retention</p>
         </div>
 
-        <!-- Average Donations -->
         <div class="text-center">
           <div class="text-2xl font-bold text-gray-900 mb-2">₹{{ formatNumber(stats.avgDonation) }}</div>
           <p class="text-sm font-medium text-gray-700">Avg. Donation</p>
           <p class="text-xs text-gray-500">Per devotee this year</p>
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

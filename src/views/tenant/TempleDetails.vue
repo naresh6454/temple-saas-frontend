@@ -94,7 +94,7 @@
           </div>
           
           <!-- Temple Stats -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white shadow rounded-lg p-6">
               <h3 class="text-lg font-medium text-gray-900 mb-2">Devotees</h3>
               <p class="text-3xl font-bold text-indigo-600">{{ temple.stats?.devoteeCount || 0 }}</p>
@@ -112,7 +112,7 @@
               <p class="text-3xl font-bold text-indigo-600">₹{{ temple.stats?.donationAmount || 0 }}</p>
               <p class="text-sm text-gray-500 mt-1">Total donations received</p>
             </div>
-          </div>
+          </div> -->
         </div>
         
         <!-- Empty state -->

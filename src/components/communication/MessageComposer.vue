@@ -219,13 +219,13 @@
             >
               Insert Template
             </button>
-            <button 
+            <!-- <button 
               type="button"
               @click="saveDraft"
               class="text-gray-600 hover:text-gray-700 font-medium"
             >
               Save Draft
-            </button>
+            </button> -->
           </div>
           <span class="text-gray-500">{{ message.length }}/1000 characters</span>
         </div>
@@ -266,7 +266,7 @@
       </div>
 
       <!-- Schedule Options -->
-      <div class="space-y-3">
+      <!-- <div class="space-y-3">
         <label class="text-sm font-semibold text-gray-900">Schedule</label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label class="flex items-center space-x-3">
@@ -307,7 +307,7 @@
             >
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Action Buttons -->
       <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">

@@ -31,12 +31,12 @@
             <option value="">All Devotees</option>
             <option value="active">Active Devotees</option>
             <option value="volunteers">Volunteers</option>
-            <option value="donors">Regular Donors</option>
-            <option value="seva_participants">Seva Participants</option>
+            <!-- <option value="donors">Regular Donors</option>
+            <option value="seva_participants">Seva Participants</option> -->
           </select>
         </div>
         
-        <div>
+        <!-- <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Location</label>
           <select v-model="selectedLocation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
             <option value="">All Locations</option>
@@ -44,9 +44,9 @@
             <option value="outstation">Outstation Devotees</option>
             <option value="international">International Devotees</option>
           </select>
-        </div>
+        </div> -->
         
-        <div>
+        <!-- <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Age Group</label>
           <select v-model="selectedAgeGroup" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
             <option value="">All Ages</option>
@@ -54,7 +54,7 @@
             <option value="adult">Adult (36-60)</option>
             <option value="senior">Senior (60+)</option>
           </select>
-        </div>
+        </div> -->
       </div>
 
       <!-- Quick Select Buttons -->
@@ -200,32 +200,32 @@
         <div class="flex justify-between items-center mt-2">
           <p class="text-xs text-gray-500">{{ messageContent.length }}/{{ maxLength }} characters</p>
           <div class="flex space-x-2">
-            <button 
+            <!-- <button 
               @click="insertVariable('name')"
               class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors duration-150"
             >
               Insert {name}
-            </button>
-            <button 
+            </button> -->
+            <!-- <button 
               @click="insertVariable('temple')"
               class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors duration-150"
             >
               Insert {temple}
-            </button>
+            </button> -->
           </div>
         </div>
       </div>
 
       <!-- Schedule Options -->
       <div class="mb-4">
-        <label class="flex items-center space-x-2 cursor-pointer mb-3">
+        <!-- <label class="flex items-center space-x-2 cursor-pointer mb-3">
           <input 
             type="checkbox" 
             v-model="scheduleMessage"
             class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
           >
           <span class="text-sm font-medium text-gray-700">Schedule Message</span>
-        </label>
+        </label> -->
         
         <div v-if="scheduleMessage" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -265,18 +265,18 @@
 
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
-      <button 
+      <!-- <button 
         @click="saveDraft"
         class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
       >
         Save as Draft
-      </button>
-      <button 
+      </button> -->
+      <!-- <button 
         @click="sendPreview"
         class="px-6 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all duration-200 font-medium"
       >
         Send Preview
-      </button>
+      </button> -->
       <button 
         @click="sendMessage"
         :disabled="!canSendMessage"

@@ -168,7 +168,7 @@
                 <option value="">Select Category</option>
                 <option value="seva">Seva Notifications</option>
                 <option value="event">Event Announcements</option>
-                <option value="donation">Donation Receipts</option>
+                <!-- <option value="donation">Donation Receipts</option> -->
                 <option value="general">General Messages</option>
                 <option value="festival">Festival Greetings</option>
               </select>
@@ -196,19 +196,19 @@
               ></textarea>
             </div>
 
-            <div class="bg-gray-50 rounded-lg p-4">
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Available Variables</h4>
-              <div class="flex flex-wrap gap-2">
-                <span
+            <!-- <div class="bg-gray-50 rounded-lg p-4"> -->
+              <!-- <h4 class="text-sm font-medium text-gray-700 mb-2">Available Variables</h4> -->
+              <!-- <div class="flex flex-wrap gap-2"> -->
+                <!-- <span
                   v-for="variable in availableVariables"
                   :key="variable"
                   @click="insertVariable(variable)"
                   class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs cursor-pointer hover:bg-indigo-200 transition-colors"
                 >
                   {{ variable }}
-                </span>
-              </div>
-            </div>
+                </span> -->
+              <!-- </div> -->
+            <!-- </div> -->
 
             <div class="flex justify-end gap-3 pt-4">
               <button
