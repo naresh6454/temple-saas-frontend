@@ -183,12 +183,24 @@
             <!-- Action Button -->
             <button
               @click.stop="selectTemple(temple)"
-              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 group-hover:bg-indigo-700"
+              :disabled="isTempleJoined(temple.id)"
+              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white transition-all duration-200"
+              :class="isTempleJoined(temple.id) 
+                ? 'bg-green-600 cursor-not-allowed opacity-80' 
+                : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 group-hover:bg-indigo-700'"
             >
-              Join as Volunteer
-              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-              </svg>
+              <span v-if="isTempleJoined(temple.id)">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Joined Successfully
+              </span>
+              <span v-else>
+                Join as Volunteer
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+              </span>
             </button>
           </div>
         </div>
@@ -249,147 +261,194 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue';
+import { useToast } from '@/composables/useToast';
+import { useAuthStore } from '@/stores/auth';
+// Import temple service for data fetching (but avoid using join method)
+import templeService from '@/services/temple.service';
+// TEMPORARILY COMMENTED OUT to avoid any redirect issues in join flow
+// import { useTemple } from '@/composables/useTemple';
 
-const router = useRouter()
+const toast = useToast();
+const authStore = useAuthStore();
+// TEMPORARILY COMMENTED OUT
+// const { selectTemple: selectAndNavigate } = useTemple();
 
 // Reactive data
-const searchQuery = ref('')
-const selectedLocation = ref('')
-const isLoading = ref(true)
-const showConfirmModal = ref(false)
-const selectedTemple = ref(null)
-const isJoining = ref(false)
+const searchQuery = ref('');
+const selectedLocation = ref('');
+const isLoading = ref(true);
+const showConfirmModal = ref(false);
+const selectedTemple = ref(null);
+const isJoining = ref(false);
+const temples = ref([]);
+const joinedTemples = ref([]);
 
-// Mock temple data - this would come from an API in real implementation
-const temples = ref([
-  {
-    id: 1,
-    name: 'Sri Ranganatha Swamy Temple',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    phone: '+91 80 2234 5678',
-    image: null,
-    volunteersCount: 15,
-    status: 'approved'
-  },
-  {
-    id: 2,
-    name: 'Iskcon Temple',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    phone: '+91 80 2345 6789',
-    image: null,
-    volunteersCount: 32,
-    status: 'approved'
-  },
-  {
-    id: 3,
-    name: 'Chamundeshwari Temple',
-    city: 'Mysuru',
-    state: 'Karnataka',
-    phone: '+91 821 234 5678',
-    image: null,
-    volunteersCount: 8,
-    status: 'approved'
-  },
-  {
-    id: 4,
-    name: 'Siddhivinayak Temple',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    phone: '+91 22 2345 6789',
-    image: null,
-    volunteersCount: 45,
-    status: 'approved'
-  },
-  {
-    id: 5,
-    name: 'Lotus Temple',
-    city: 'Delhi',
-    state: 'Delhi',
-    phone: '+91 11 2345 6789',
-    image: null,
-    volunteersCount: 28,
-    status: 'approved'
+// Get user-specific localStorage key
+const getJoinedTemplesKey = () => {
+  const userId = authStore.user?.id || authStore.user?.email || 'anonymous';
+  return `joinedTemples_${userId}`;
+};
+
+// Load joined temples from localStorage for the current user
+const loadJoinedTemples = () => {
+  try {
+    const key = getJoinedTemplesKey();
+    const storedJoinedTemples = localStorage.getItem(key);
+    if (storedJoinedTemples) {
+      joinedTemples.value = JSON.parse(storedJoinedTemples);
+    } else {
+      joinedTemples.value = [];
+    }
+    console.log('Loaded joined temples:', joinedTemples.value);
+  } catch (error) {
+    console.error('Error loading joined temples from localStorage:', error);
+    joinedTemples.value = [];
   }
-])
+};
+
+// Save joined temples to localStorage for the current user
+const saveJoinedTemples = () => {
+  try {
+    const key = getJoinedTemplesKey();
+    localStorage.setItem(key, JSON.stringify(joinedTemples.value));
+    console.log('Saved joined temples:', joinedTemples.value);
+  } catch (error) {
+    console.error('Error saving joined temples to localStorage:', error);
+  }
+};
+
+// Check if a temple is already joined
+const isTempleJoined = (templeId) => {
+  const isJoined = joinedTemples.value.includes(templeId);
+  console.log(`Temple ${templeId} joined status:`, isJoined);
+  return isJoined;
+};
 
 // Computed properties
 const filteredTemples = computed(() => {
-  let filtered = temples.value.filter(temple => temple.status === 'approved')
+  let filtered = temples.value;
 
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(temple =>
-      temple.name.toLowerCase().includes(query) ||
-      temple.city.toLowerCase().includes(query) ||
-      temple.state.toLowerCase().includes(query)
-    )
+      temple.name?.toLowerCase().includes(query) ||
+      temple.city?.toLowerCase().includes(query) ||
+      temple.state?.toLowerCase().includes(query)
+    );
   }
 
   if (selectedLocation.value) {
     filtered = filtered.filter(temple =>
-      temple.city.toLowerCase() === selectedLocation.value.toLowerCase()
-    )
+      temple.city?.toLowerCase() === selectedLocation.value.toLowerCase()
+    );
   }
 
-  return filtered
-})
+  return filtered;
+});
 
 // Methods
 const clearFilters = () => {
-  searchQuery.value = ''
-  selectedLocation.value = ''
-}
+  searchQuery.value = '';
+  selectedLocation.value = '';
+};
 
 const selectTemple = (temple) => {
-  selectedTemple.value = temple
-  showConfirmModal.value = true
-}
+  if (isTempleJoined(temple.id)) {
+    // If already joined, show a message or do nothing
+    toast.info(`You are already a volunteer at ${temple.name}`);
+    return;
+  }
+
+  selectedTemple.value = temple;
+  showConfirmModal.value = true;
+};
 
 const closeModal = () => {
-  showConfirmModal.value = false
-  selectedTemple.value = null
-}
+  showConfirmModal.value = false;
+  selectedTemple.value = null;
+};
 
+// Local-only join to avoid API redirect issues
 const confirmSelection = async () => {
-  if (!selectedTemple.value) return
-
-  isJoining.value = true
+  if (!selectedTemple.value) return;
+  isJoining.value = true;
 
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    console.log('Joining temple locally to avoid redirect issues...');
+    
+    // Work locally for now to avoid any API-related redirects
+    if (!joinedTemples.value.includes(selectedTemple.value.id)) {
+      joinedTemples.value.push(selectedTemple.value.id);
+      saveJoinedTemples();
+      console.log('Temple added to local joined list:', joinedTemples.value);
+    }
 
-    // Store temple selection (in real app, this would be an API call)
-    localStorage.setItem('selectedTempleId', selectedTemple.value.id.toString())
-    localStorage.setItem('selectedTempleName', selectedTemple.value.name)
-
-    // Show success message (you might want to use a toast notification system)
-    alert(`Successfully joined ${selectedTemple.value.name} as a volunteer!`)
-
-    // Navigate to volunteer dashboard
-    router.push(`/entity/${selectedTemple.value.id}/volunteer/dashboard`)
+    // Store temple selection
+    try {
+      localStorage.setItem('selectedEntityId', selectedTemple.value.id.toString());
+      localStorage.setItem('selectedTempleName', selectedTemple.value.name);
+      console.log('Temple info saved to localStorage');
+    } catch (storageError) {
+      console.error('localStorage error:', storageError);
+    }
+    
+    // Show success message
+    toast.success(`Successfully joined ${selectedTemple.value.name} as a volunteer!`);
+    console.log('Local temple join completed successfully');
+    
   } catch (error) {
-    console.error('Error joining temple:', error)
-    alert('Failed to join temple. Please try again.')
+    console.error('Error in local temple join:', error);
+    toast.error('Failed to join temple locally. Please try again.');
   } finally {
-    isJoining.value = false
-    closeModal()
+    isJoining.value = false;
+    closeModal();
   }
-}
+
+  // TODO: Add proper API integration once redirect issue is resolved
+  // This would involve calling templeService.joinTemple() with proper error handling
+};
+
+const fetchTemples = async () => {
+  isLoading.value = true;
+
+  try {
+    console.log('Fetching real temple data from API...');
+    
+    // Use the temple service to fetch real temples
+    const templeData = await templeService.getTemples();
+    
+    // Filter approved temples
+    temples.value = templeData.filter(temple => 
+      !temple.status || temple.status.toLowerCase() === 'approved'
+    );
+    
+    console.log(`Successfully processed ${temples.value.length} temples from API`);
+    
+    if (temples.value.length === 0) {
+      toast.info('No approved temples found. Please check back later.');
+    }
+    
+  } catch (error) {
+    console.error('Error fetching temple data from API:', error);
+    temples.value = [];
+    toast.error('Error loading temples from server. Please try refreshing the page.');
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 // Lifecycle
 onMounted(async () => {
-  // Simulate API loading
-  setTimeout(() => {
-    isLoading.value = false
-  }, 1000)
-})
+  // Wait for auth store to be initialized
+  if (!authStore.isAuthenticated) {
+    await authStore.initialize();
+  }
+  
+  // Load joined temples after auth is ready
+  loadJoinedTemples();
+  
+  // Fetch temples
+  await fetchTemples();
+});
 </script>
-
-<style scoped>
-/* Add any component-specific styles here if needed */
-</style>

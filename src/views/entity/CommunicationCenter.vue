@@ -11,7 +11,7 @@
         </div>
         
         <!-- Quick Stats -->
-        <div class="flex space-x-4">
+        <!-- <div class="flex space-x-4">
           <div class="text-center">
             <div class="text-2xl font-bold text-indigo-600">{{ stats.totalMessages }}</div>
             <div class="text-xs text-gray-500">Total Sent</div>
@@ -24,7 +24,7 @@
             <div class="text-2xl font-bold text-orange-600">{{ stats.activeTemplates }}</div>
             <div class="text-xs text-gray-500">Templates</div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
 
@@ -305,12 +305,12 @@ const tabs = computed(() => [
     icon: Mail,
     count: null
   },
-  { 
-    id: 'bulk', 
-    name: 'Bulk Message', 
-    icon: Users,
-    count: null
-  },
+  // { 
+  //   id: 'bulk', 
+  //   name: 'Bulk Message', 
+  //   icon: Users,
+  //   count: null
+  // },
   { 
     id: 'templates', 
     name: 'Templates', 

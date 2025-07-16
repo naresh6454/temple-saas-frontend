@@ -140,11 +140,11 @@ export default {
   },
 
   /**
-   * Join a temple
+   * Join a temple - Updated to use the correct endpoint from backend
    */
   async joinTemple(entityId) {
     try {
-      const response = await axios.post(`${API_URL}/devotee/join-temple`, {
+      const response = await axios.post(`${API_URL}/memberships`, {
         entity_id: entityId
       }, createAuthHeader());
       return response.data;
@@ -158,7 +158,7 @@ export default {
    */
   async getMemberships() {
     try {
-      const response = await axios.get(`${API_URL}/devotee/memberships`, createAuthHeader());
+      const response = await axios.get(`${API_URL}/memberships`, createAuthHeader());
       return response.data;
     } catch (error) {
       throw this.handleError(error);
