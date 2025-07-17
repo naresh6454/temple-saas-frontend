@@ -86,7 +86,7 @@
       </div>
 
       <!-- Phone Field (Optional) -->
-      <!-- <div>
+      <div>
         <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
           Phone Number <span class="text-gray-500 text-xs">(Optional)</span>
         </label>
@@ -98,7 +98,7 @@
           :error="errors.phone"
           autocomplete="tel"
         />
-      </div> -->
+      </div>
 
       <!-- Role Selector -->
       <div>
