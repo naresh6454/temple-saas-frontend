@@ -3,6 +3,7 @@ import CreateTemple from '@/views/tenant/CreateTemple.vue'
 import ManageTemples from '@/views/tenant/ManageTemples.vue'
 import TempleDetails from '@/views/tenant/TempleDetails.vue'
 import EditTemple from '@/views/tenant/EditTemple.vue'
+import EntityDashboard from '@/views/entity/EntityDashboard.vue' // Import the EntityDashboard component
 
 export default [
   // Standard tenant dashboard route (kept for backward compatibility)

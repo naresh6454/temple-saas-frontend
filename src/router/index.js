@@ -21,7 +21,7 @@ import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 // Tenant Views
 import TenantDashboard from '@/views/tenant/TenantDashboard.vue'
 import CreateTemple from '@/views/tenant/CreateTemple.vue'
-// import ManageTemples from '@/views/tenant/ManageTemples.vue'
+import ManageTemples from '@/views/tenant/ManageTemples.vue'
 import EditTemple from '@/views/tenant/EditTemple.vue'
 import TempleDetails from '@/views/tenant/TempleDetails.vue'  // Add import for TempleDetails
 
@@ -266,6 +266,16 @@ const routes = [
       allowedRoles: ['tenant', 'entity_admin']
     },
     children: [
+      {
+        path: '/entity/:id/dashboard',
+        name: 'EntityDirectDashboard',  // <-- Changed to a unique name
+        component: () => import('@/views/entity/EntityDashboard.vue'),
+        meta: {
+          title: 'Entity Dashboard',
+          requiresAuth: true,
+          role: 'tenant'
+        }
+      },
       {
         path: 'dashboard',
         name: 'EntityDashboard',

@@ -11,8 +11,8 @@
               </svg>
             </div>
             <div>
-              <h1 class="text-xl font-semibold text-gray-900">{{ templeInfo.name }}</h1>
-              <p class="text-sm text-gray-500">{{ templeInfo.location }}</p>
+              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
             </div>
           </div>
           <div class="flex items-center space-x-3">
@@ -36,7 +36,7 @@
       <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-6 mb-8">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-2xl font-bold text-white mb-2">Welcome back, {{ adminName }}!</h2>
+            <h2 class="text-2xl font-bold text-white mb-2">Welcome back, {{ user ? user.fullName : 'Admin' }}!</h2>
             <p class="text-indigo-100">Here's what's happening at your temple today</p>
           </div>
           <div class="hidden md:block">
@@ -48,7 +48,20 @@
       </div>
 
       <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div v-for="i in 4" :key="i" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+          <div class="animate-pulse flex items-center">
+            <div class="h-12 w-12 bg-gray-200 rounded-lg mr-4"></div>
+            <div class="space-y-2 flex-1">
+              <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+              <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Registered Devotees -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
           <div class="flex items-center">
@@ -61,8 +74,8 @@
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Registered Devotees</p>
-              <p class="text-2xl font-bold text-gray-900">{{ stats.devotees.total }}</p>
-              <p class="text-xs text-green-600">+{{ stats.devotees.newThisMonth }} this month</p>
+              <p class="text-2xl font-bold text-gray-900">{{ dashboardData.devotees?.total || 0 }}</p>
+              <p class="text-xs text-green-600">+{{ dashboardData.devotees?.newThisMonth || 0 }} this month</p>
             </div>
           </div>
         </div>
@@ -80,10 +93,10 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Seva Bookings</p>
               <div class="flex items-baseline space-x-2">
-                <p class="text-2xl font-bold text-gray-900">{{ stats.sevas.today }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ dashboardData.sevas?.today || 0 }}</p>
                 <span class="text-sm text-gray-500">today</span>
               </div>
-              <p class="text-xs text-blue-600">{{ stats.sevas.thisMonth }} this month</p>
+              <p class="text-xs text-blue-600">{{ dashboardData.sevas?.thisMonth || 0 }} this month</p>
             </div>
           </div>
         </div>
@@ -100,8 +113,8 @@
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Month Donations</p>
-              <p class="text-2xl font-bold text-gray-900">₹{{ formatCurrency(stats.donations.thisMonth) }}</p>
-              <p class="text-xs text-green-600">+{{ stats.donations.growth }}% from last month</p>
+              <p class="text-2xl font-bold text-gray-900">₹{{ formatCurrency(dashboardData.donations?.thisMonth || 0) }}</p>
+              <p class="text-xs text-green-600">+{{ dashboardData.donations?.growth || 0 }}% from last month</p>
             </div>
           </div>
         </div>
@@ -118,8 +131,8 @@
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Upcoming Events</p>
-              <p class="text-2xl font-bold text-gray-900">{{ stats.events.upcoming }}</p>
-              <p class="text-xs text-purple-600">{{ stats.events.thisWeek }} this week</p>
+              <p class="text-2xl font-bold text-gray-900">{{ dashboardData.events?.upcoming || 0 }}</p>
+              <p class="text-xs text-purple-600">{{ dashboardData.events?.thisWeek || 0 }} this week</p>
             </div>
           </div>
         </div>
@@ -323,114 +336,120 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useTempleStore } from '@/stores/temple'
+import { apiClient } from '@/plugins/axios'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const entityId = computed(() => route.params.id)
+const authStore = useAuthStore()
+const templeStore = useTempleStore()
+const toast = useToast()
 
-// Mock data - replace with actual API calls
-const templeInfo = ref({
-  name: 'Sri Venkateswara Temple',
-  location: 'Bangalore, Karnataka'
+// User info
+const user = computed(() => authStore.user)
+
+// Temple data
+const temple = ref(null)
+const loading = ref(true)
+const dashboardData = ref({
+  devotees: { total: 0, newThisMonth: 0 },
+  sevas: { today: 0, thisMonth: 0 },
+  donations: { thisMonth: 0, growth: 0 },
+  events: { upcoming: 0, thisWeek: 0 }
 })
 
-const adminName = ref('Temple Admin')
+// Notifications
+const notifications = ref([])
 
-const stats = ref({
-  devotees: {
-    total: 1247,
-    newThisMonth: 23
-  },
-  sevas: {
-    today: 8,
-    thisMonth: 156
-  },
-  donations: {
-    thisMonth: 85000,
-    growth: 12
-  },
-  events: {
-    upcoming: 3,
-    thisWeek: 1
-  }
-})
+// Events and donors - will be loaded from API
+const upcomingEvents = ref([])
+const topDonors = ref([])
 
-const notifications = ref([
-  {
-    id: 1,
-    type: 'seva',
-    title: 'New Seva Booking',
-    message: 'Ramesh Kumar booked Abhishekam for tomorrow',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
-  },
-  {
-    id: 2,
-    type: 'donation',
-    title: 'Donation Received',
-    message: 'Anonymous donation of ₹5,000 received',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
-  },
-  {
-    id: 3,
-    type: 'event',
-    title: 'Event RSVP',
-    message: '15 new RSVPs for Diwali celebration',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4) // 4 hours ago
+// Load entity data
+const loadEntityData = async () => {
+  try {
+    loading.value = true
+    console.log('Loading entity data for ID:', entityId.value)
+    
+    // Try to get temple from store first
+    const storedTemple = templeStore.getTempleById(entityId.value)
+    
+    if (storedTemple) {
+      console.log('Found temple in store:', storedTemple)
+      temple.value = storedTemple
+    } else {
+      // Fetch temple details from API
+      console.log('Temple not in store, fetching from API')
+      try {
+        const response = await apiClient.get(`/api/v1/entities/${entityId.value}`)
+        if (response.data) {
+          temple.value = response.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch temple details:', err)
+        toast.error('Failed to load temple details')
+      }
+    }
+    
+    // Fetch dashboard data
+    try {
+      const response = await apiClient.get(`/api/v1/entities/${entityId.value}/dashboard`)
+      if (response && response.data) {
+        dashboardData.value = response.data
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err)
+      // Use default values if API fails
+    }
+    
+    // Fetch upcoming events
+    try {
+      const eventsResponse = await apiClient.get(`/api/v1/events/upcoming?entity_id=${entityId.value}&limit=3`)
+      if (eventsResponse && eventsResponse.data) {
+        upcomingEvents.value = eventsResponse.data.map(event => ({
+          ...event,
+          date: new Date(event.event_date || event.date || Date.now())
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to fetch upcoming events:', err)
+      upcomingEvents.value = []
+    }
+    
+    // Fetch top donors
+    try {
+      const donorsResponse = await apiClient.get(`/api/v1/donations/top?entity_id=${entityId.value}&limit=5`)
+      if (donorsResponse && donorsResponse.data) {
+        topDonors.value = donorsResponse.data
+      }
+    } catch (err) {
+      console.error('Failed to fetch top donors:', err)
+      topDonors.value = []
+    }
+    
+    // Fetch notifications
+    try {
+      const notificationsResponse = await apiClient.get(`/api/v1/notifications?entity_id=${entityId.value}&limit=5`)
+      if (notificationsResponse && notificationsResponse.data) {
+        notifications.value = notificationsResponse.data.map(notification => ({
+          ...notification,
+          createdAt: new Date(notification.created_at || notification.timestamp || Date.now())
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err)
+      notifications.value = []
+    }
+    
+  } catch (err) {
+    console.error('Error loading entity data:', err)
+    toast.error('Failed to load entity data')
+  } finally {
+    loading.value = false
   }
-])
-
-const upcomingEvents = ref([
-  {
-    id: 1,
-    title: 'Diwali Celebration',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 7 days from now
-    rsvpCount: 85
-  },
-  {
-    id: 2,
-    title: 'Monthly Abhishekam',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3), // 3 days from now
-    rsvpCount: 42
-  },
-  {
-    id: 3,
-    title: 'Spiritual Discourse',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14), // 14 days from now
-    rsvpCount: 67
-  }
-])
-
-const topDonors = ref([
-  {
-    id: 1,
-    name: 'Rajesh Sharma',
-    amount: 25000,
-    totalDonations: 12
-  },
-  {
-    id: 2,
-    name: 'Priya Devi',
-    amount: 18000,
-    totalDonations: 8
-  },
-  {
-    id: 3,
-    name: 'Anonymous',
-    amount: 15000,
-    totalDonations: 5
-  },
-  {
-    id: 4,
-    name: 'Kumar Family',
-    amount: 12000,
-    totalDonations: 6
-  },
-  {
-    id: 5,
-    name: 'Lakshmi Narayan',
-    amount: 10000,
-    totalDonations: 4
-  }
-])
+}
 
 // Helper functions
 const formatCurrency = (amount) => {
@@ -438,6 +457,7 @@ const formatCurrency = (amount) => {
 }
 
 const formatTimeAgo = (date) => {
+  if (!date) return ''
   const now = new Date()
   const diff = now - date
   const minutes = Math.floor(diff / (1000 * 60))
@@ -454,10 +474,12 @@ const formatTimeAgo = (date) => {
 }
 
 const formatEventDate = (date) => {
+  if (!date) return ''
   return date.getDate().toString()
 }
 
 const formatFullDate = (date) => {
+  if (!date) return ''
   return date.toLocaleDateString('en-IN', {
     weekday: 'short',
     month: 'short',
@@ -488,5 +510,6 @@ const getNotificationIconPath = (type) => {
 onMounted(() => {
   // Load dashboard data
   console.log('EntityDashboard mounted for entity:', entityId.value)
+  loadEntityData()
 })
 </script>

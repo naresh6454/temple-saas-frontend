@@ -1,4 +1,4 @@
-<!-- <template>
+<template>
   <div class="min-h-screen bg-gray-50">
 
     <div class="bg-white shadow-sm border-b border-gray-200">
@@ -172,6 +172,7 @@
             @edit="handleEditTemple"
             @delete="handleDeleteTemple"
             @resubmit="handleResubmitTemple"
+            @manage="handleViewTemple"
           />
         </div>
       </div>
@@ -243,9 +244,9 @@ const stats = computed(() => {
   const temples = templeStore.temples
   return {
     total: temples.length,
-    approved: temples.filter(t => t.status === 'APPROVED').length,
-    pending: temples.filter(t => t.status === 'PENDING').length,
-    rejected: temples.filter(t => t.status === 'REJECTED').length
+    approved: temples.filter(t => t.status === 'APPROVED' || t.status === 'approved').length,
+    pending: temples.filter(t => t.status === 'PENDING' || t.status === 'pending').length,
+    rejected: temples.filter(t => t.status === 'REJECTED' || t.status === 'rejected').length
   }
 })
 
@@ -265,7 +266,10 @@ const filteredTemples = computed(() => {
 
   // Apply status filter
   if (statusFilter.value) {
-    filtered = filtered.filter(temple => temple.status === statusFilter.value)
+    const status = statusFilter.value.toLowerCase()
+    filtered = filtered.filter(temple => 
+      temple.status.toLowerCase() === status
+    )
   }
 
   // Apply sorting
@@ -291,17 +295,19 @@ const loadTemples = async () => {
   try {
     await templeStore.fetchTemples()
   } catch (error) {
-error('Failed to load temples')
+    error('Failed to load temples')
   } finally {
     loading.value = false
   }
 }
 
 const handleViewTemple = (temple) => {
-  if (temple.status === 'APPROVED') {
+  // Case-insensitive check for approved status
+  if (temple.status && temple.status.toString().toLowerCase() === 'approved') {
+    console.log("Navigating to entity dashboard with ID:", temple.id)
     router.push(`/entity/${temple.id}/dashboard`)
   } else {
-warning('Temple must be approved to access dashboard')
+    warning('Temple must be approved to access dashboard')
   }
 }
 
@@ -321,11 +327,11 @@ const handleResubmitTemple = (temple) => {
 const confirmDelete = async () => {
   try {
     await templeStore.deleteTemple(templeToDelete.value.id)
-success('Temple deleted successfully')
+    success('Temple deleted successfully')
     showDeleteModal.value = false
     templeToDelete.value = null
   } catch (error) {
-error('Failed to delete temple')
+    error('Failed to delete temple')
   }
 }
 
@@ -333,4 +339,4 @@ error('Failed to delete temple')
 onMounted(() => {
   loadTemples()
 })
-</script> -->
+</script>
