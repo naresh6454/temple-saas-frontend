@@ -593,59 +593,32 @@ const handleSubmit = async () => {
     isSubmitting.value = true
     error.value = null
 
-    // Prepare form data for API
-    const formData = new FormData()
-    
-    // CRITICAL: Use camelCase field names to match backend expectations
-    
-    // Add required fields first
-    formData.append('name', form.name.trim())
-    formData.append('mainDeity', form.mainDeity) // Using camelCase
-    formData.append('templeType', form.templeType) // Using camelCase
-    formData.append('establishedYear', parseInt(form.establishedYear)) // Using camelCase
-    formData.append('phone', form.phone.replace(/[^0-9]/g, ''))
-    formData.append('email', form.email)
-    
-    // Add optional fields
-    formData.append('description', form.description || '')
-    formData.append('addressLine1', form.addressLine1) // Using camelCase
-    formData.append('city', form.city)
-    formData.append('state', form.state)
-    formData.append('district', form.district)
-    formData.append('pincode', form.pincode)
-    formData.append('landmark', form.landmark || '')
-    formData.append('mapLink', form.googleMapsLink || '')
-    
-    // Add documents
-    if (form.documents.registration) {
-      formData.append('registration', form.documents.registration)
-    }
-    
-    if (form.documents.trustDeed) {
-      formData.append('trustDeed', form.documents.trustDeed) // Using camelCase
-    }
-    
-    if (form.documents.property) {
-      formData.append('property', form.documents.property)
-    }
-    
-    if (form.documents.additional && form.documents.additional.length) {
-      form.documents.additional.forEach((file, index) => {
-        formData.append(`additional_${index}`, file)
-      })
+    // Prepare data in the format expected by the backend
+    // Using snake_case field names per the Entity struct JSON tags
+    const entityData = {
+      name: form.name.trim(),
+      main_deity: form.mainDeity,
+      temple_type: form.templeType,
+      established_year: parseInt(form.establishedYear),
+      phone: form.phone.replace(/[^0-9]/g, ''),
+      email: form.email,
+      description: form.description || '',
+      street_address: form.addressLine1 || '',
+      city: form.city,
+      district: form.district,
+      state: form.state,
+      pincode: form.pincode,
+      landmark: form.landmark || '',
+      map_link: form.googleMapsLink || '',
+      accepted_terms: true,
+      status: 'pending'
     }
 
     // Log what's being sent
-    console.log('Submitting temple with required fields:')
-    console.log('- name:', form.name)
-    console.log('- mainDeity:', form.mainDeity)
-    console.log('- templeType:', form.templeType)
-    console.log('- establishedYear:', form.establishedYear)
-    console.log('- phone:', form.phone)
-    console.log('- email:', form.email)
-
+    console.log('Submitting temple with payload:', entityData)
+    
     // Submit to the API
-    await templeStore.createTemple(formData)
+    await templeStore.createTemple(entityData)
 
     toast.success('Temple registration submitted successfully! You will receive an email confirmation shortly.')
     router.push('/tenant/dashboard')
@@ -653,6 +626,7 @@ const handleSubmit = async () => {
     error.value = err.response?.data?.error || 'Failed to submit temple registration. Please try again.'
     toast.error(error.value)
     console.error('Temple registration failed:', err)
+    console.error('Error details:', err.response?.data || err.message)
   } finally {
     isSubmitting.value = false
   }

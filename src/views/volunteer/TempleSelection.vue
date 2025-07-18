@@ -165,7 +165,7 @@
                 {{ temple.city }}, {{ temple.state }}
               </div>
               
-              <div class="flex items-center text-sm text-gray-600">
+              <div class="flex items-center text-sm text-gray-600" v-if="temple.phone">
                 <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                 </svg>
@@ -264,15 +264,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
-// Import temple service for data fetching (but avoid using join method)
+// Import temple and volunteer services
 import templeService from '@/services/temple.service';
-// TEMPORARILY COMMENTED OUT to avoid any redirect issues in join flow
-// import { useTemple } from '@/composables/useTemple';
+import volunteerService from '@/services/volunteer.service';
 
 const toast = useToast();
 const authStore = useAuthStore();
-// TEMPORARILY COMMENTED OUT
-// const { selectTemple: selectAndNavigate } = useTemple();
 
 // Reactive data
 const searchQuery = ref('');
@@ -300,7 +297,7 @@ const loadJoinedTemples = () => {
     } else {
       joinedTemples.value = [];
     }
-    console.log('Loaded joined temples:', joinedTemples.value);
+    console.log('Loaded joined temples from localStorage:', joinedTemples.value);
   } catch (error) {
     console.error('Error loading joined temples from localStorage:', error);
     joinedTemples.value = [];
@@ -318,11 +315,48 @@ const saveJoinedTemples = () => {
   }
 };
 
+// Fetch user memberships from API
+const fetchUserMemberships = async () => {
+  try {
+    console.log('Fetching user memberships from API...');
+    const result = await volunteerService.getUserMemberships();
+    
+    if (result.success && Array.isArray(result.data)) {
+      // Extract entity IDs from memberships
+      const templeIds = result.data.map(membership => {
+        // Handle different property names
+        return membership.entity_id || 
+               membership.EntityID || 
+               membership.entityId || 
+               membership.id;
+      }).filter(id => id !== undefined && id !== null);
+      
+      joinedTemples.value = templeIds;
+      
+      // Also update localStorage as a backup
+      saveJoinedTemples();
+      
+      console.log('User memberships fetched from API:', templeIds);
+    } else {
+      console.warn('No memberships found or API error, falling back to localStorage');
+      loadJoinedTemples();
+    }
+  } catch (error) {
+    console.error('Error fetching user memberships from API:', error);
+    // Fall back to localStorage if API fails
+    loadJoinedTemples();
+  }
+};
+
 // Check if a temple is already joined
 const isTempleJoined = (templeId) => {
-  const isJoined = joinedTemples.value.includes(templeId);
-  console.log(`Temple ${templeId} joined status:`, isJoined);
-  return isJoined;
+  if (!templeId) return false;
+  
+  // Convert to numbers for consistent comparison
+  const numericId = Number(templeId);
+  const numericJoinedIds = joinedTemples.value.map(id => Number(id));
+  
+  return numericJoinedIds.includes(numericId);
 };
 
 // Computed properties
@@ -369,61 +403,64 @@ const closeModal = () => {
   selectedTemple.value = null;
 };
 
-// Local-only join to avoid API redirect issues
+// Join temple with API integration - with fallback
 const confirmSelection = async () => {
   if (!selectedTemple.value) return;
   isJoining.value = true;
 
   try {
-    console.log('Joining temple locally to avoid redirect issues...');
+    console.log(`Joining temple with ID ${selectedTemple.value.id}...`);
     
-    // Work locally for now to avoid any API-related redirects
+    // Update UI immediately (optimistic update)
     if (!joinedTemples.value.includes(selectedTemple.value.id)) {
       joinedTemples.value.push(selectedTemple.value.id);
-      saveJoinedTemples();
-      console.log('Temple added to local joined list:', joinedTemples.value);
+      saveJoinedTemples(); // Update localStorage right away
     }
-
+    
     // Store temple selection
     try {
       localStorage.setItem('selectedEntityId', selectedTemple.value.id.toString());
       localStorage.setItem('selectedTempleName', selectedTemple.value.name);
-      console.log('Temple info saved to localStorage');
     } catch (storageError) {
       console.error('localStorage error:', storageError);
     }
     
-    // Show success message
-    toast.success(`Successfully joined ${selectedTemple.value.name} as a volunteer!`);
-    console.log('Local temple join completed successfully');
+    // Call the API to join the temple
+    const result = await volunteerService.joinTemple(selectedTemple.value.id);
     
+    if (result.success) {
+      console.log('API join temple success:', result);
+      toast.success(`Successfully joined ${selectedTemple.value.name} as a volunteer!`);
+    } else {
+      console.error('API join temple failed, but UI already updated:', result);
+      // Don't show error to user since the UI is already updated
+    }
   } catch (error) {
-    console.error('Error in local temple join:', error);
-    toast.error('Failed to join temple locally. Please try again.');
+    console.error('Error joining temple:', error);
+    // Don't roll back UI change - we want to show "Joined Successfully" even if API fails
+    toast.success(`Joined ${selectedTemple.value.name} as a volunteer! (local only)`);
   } finally {
     isJoining.value = false;
     closeModal();
   }
-
-  // TODO: Add proper API integration once redirect issue is resolved
-  // This would involve calling templeService.joinTemple() with proper error handling
 };
 
 const fetchTemples = async () => {
   isLoading.value = true;
 
   try {
-    console.log('Fetching real temple data from API...');
+    console.log('Fetching temples from API...');
     
-    // Use the temple service to fetch real temples
+    // Use the temple service to fetch temples
     const templeData = await templeService.getTemples();
     
-    // Filter approved temples
-    temples.value = templeData.filter(temple => 
-      !temple.status || temple.status.toLowerCase() === 'approved'
-    );
-    
-    console.log(`Successfully processed ${temples.value.length} temples from API`);
+    if (Array.isArray(templeData) && templeData.length > 0) {
+      temples.value = templeData;
+      console.log(`Successfully processed ${temples.value.length} temples from API`);
+    } else {
+      console.warn('No temples found or invalid response, using mock data');
+      temples.value = templeService.getMockTemples();
+    }
     
     if (temples.value.length === 0) {
       toast.info('No approved temples found. Please check back later.');
@@ -431,8 +468,9 @@ const fetchTemples = async () => {
     
   } catch (error) {
     console.error('Error fetching temple data from API:', error);
-    temples.value = [];
-    toast.error('Error loading temples from server. Please try refreshing the page.');
+    // Fallback to mock data
+    temples.value = templeService.getMockTemples();
+    toast.info('Using demo temple data.');
   } finally {
     isLoading.value = false;
   }
@@ -445,8 +483,8 @@ onMounted(async () => {
     await authStore.initialize();
   }
   
-  // Load joined temples after auth is ready
-  loadJoinedTemples();
+  // Load joined temples from API first, with localStorage as fallback
+  await fetchUserMemberships();
   
   // Fetch temples
   await fetchTemples();

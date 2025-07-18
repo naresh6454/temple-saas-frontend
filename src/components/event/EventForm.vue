@@ -135,7 +135,7 @@
       </div>
 
       <!-- Event Image -->
-      <div>
+      <!-- <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
           Event Image
         </label>
@@ -177,10 +177,10 @@
             </button>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Associated Sevas -->
-      <div>
+      <!-- <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
           Associated Sevas
         </label>
@@ -204,7 +204,6 @@
             </button>
           </div>
 
-          <!-- Selected Sevas -->
           <div v-if="form.attachedSevas.length > 0" class="flex flex-wrap gap-2">
             <span
               v-for="seva in form.attachedSevas"
@@ -224,17 +223,17 @@
             </span>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Notification Settings -->
-      <div class="bg-gray-50 rounded-lg p-4">
+      <!-- <div class="bg-gray-50 rounded-lg p-4">
         <h3 class="font-medium text-gray-900 mb-3 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           Notification Settings
-        </h3>
-        <div class="space-y-3">
+        </h3> -->
+        <!-- <div class="space-y-3">
           <label class="flex items-center">
             <input
               v-model="form.notifyOnCreate"
@@ -255,8 +254,8 @@
               Send reminder notification 1 day before event
             </span>
           </label>
-        </div>
-      </div>
+        </div> -->
+      <!-- </div> -->
 
       <!-- Form Actions -->
       <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">

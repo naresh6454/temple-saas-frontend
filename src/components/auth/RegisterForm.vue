@@ -85,10 +85,10 @@
         />
       </div>
 
-      <!-- Phone Field (Optional) -->
+      <!-- Phone Field (Required) -->
       <div>
         <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-          Phone Number <span class="text-gray-500 text-xs">(Optional)</span>
+          Phone Number <span class="text-red-500">*</span>
         </label>
         <BaseInput
           id="phone"
@@ -96,6 +96,7 @@
           type="tel"
           placeholder="Enter your phone number"
           :error="errors.phone"
+          required
           autocomplete="tel"
         />
       </div>
@@ -223,6 +224,7 @@ const isFormValid = computed(() => {
   return form.value.fullName && 
          form.value.email && 
          form.value.password && 
+         form.value.phone && // Phone is now required
          form.value.role &&
          form.value.acceptTerms &&
          Object.keys(errors.value).length === 0
@@ -243,6 +245,8 @@ const validateForm = () => {
     errors.value.email = 'Email is required'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
     errors.value.email = 'Please enter a valid email address'
+  } else if (!form.value.email.endsWith('@gmail.com')) {
+    errors.value.email = 'Only @gmail.com email addresses are allowed'
   }
   
   // Password validation
@@ -252,8 +256,10 @@ const validateForm = () => {
     errors.value.password = 'Password must be at least 8 characters'
   }
   
-  // Phone validation (optional)
-  if (form.value.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(form.value.phone.replace(/\s/g, ''))) {
+  // Phone validation (required)
+  if (!form.value.phone) {
+    errors.value.phone = 'Phone number is required'
+  } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(form.value.phone.replace(/\s/g, ''))) {
     errors.value.phone = 'Please enter a valid phone number'
   }
   
@@ -291,51 +297,47 @@ const handleRegister = async () => {
         fullName: form.value.fullName,
         email: form.value.email,
         password: form.value.password,
-        // Include phone only if it's not empty
-        ...(form.value.phone && { phone: form.value.phone }),
-        role: roleMapping[form.value.role] || form.value.role,
-        // Set initial status for tenants to PENDING
-        ...(form.value.role === 'tenant' && { status: 'PENDING' })
+        phone: form.value.phone, // Phone is required by backend
+        role: roleMapping[form.value.role] || form.value.role
+        // Removed status field as it's not expected by the backend
       })
       
       console.log('Registration successful:', response)
+      
+      // Set success state
+      needsApproval.value = form.value.role === 'tenant'
+      
+      // Show both success indicators
+      showSuccessModal.value = true
+      registrationSuccess.value = true
+      
+      // Show a toast notification
+      success(needsApproval.value 
+        ? 'Your temple admin account has been created! You\'ll be notified after approval.' 
+        : 'Your account has been created successfully!')
+      
+      // Store registration result in auth store if needed
+      if (authStore && typeof authStore.setRegistrationResult === 'function') {
+        authStore.setRegistrationResult({
+          success: true,
+          needsApproval: needsApproval.value,
+          message: needsApproval.value 
+            ? 'Your temple admin account has been created. You\'ll be notified after approval.'
+            : 'Your account has been created successfully.'
+        })
+      }
+      
+      // Clear the form
+      resetForm()
+      
+      // Automatically redirect after a short delay (3 seconds)
+      setTimeout(() => {
+        goToLogin()
+      }, 3000)
     } catch (apiError) {
       console.error('API Error during registration:', apiError)
-      // If the API call fails, we'll still proceed to show success for demo purposes
-      // In a production environment, you'd want to handle this error properly
+      throw apiError // Re-throw to be caught by the outer catch block
     }
-    
-    // Set success state regardless of API result (for demo/development)
-    // Check if registration needs approval (for temple admins)
-    needsApproval.value = form.value.role === 'tenant'
-    
-    // Show both success indicators - choose which one works better in your app
-    showSuccessModal.value = true
-    registrationSuccess.value = true
-    
-    // Show a toast notification as well for better visibility
-    success(needsApproval.value 
-      ? 'Your temple admin account has been created! You\'ll be notified after approval.' 
-      : 'Your account has been created successfully!')
-    
-    // Store registration result in auth store if needed
-    if (authStore && typeof authStore.setRegistrationResult === 'function') {
-      authStore.setRegistrationResult({
-        success: true,
-        needsApproval: needsApproval.value,
-        message: needsApproval.value 
-          ? 'Your temple admin account has been created. You\'ll be notified after approval.'
-          : 'Your account has been created successfully.'
-      })
-    }
-    
-    // Clear the form
-    resetForm()
-    
-    // Automatically redirect after a short delay (3 seconds)
-    setTimeout(() => {
-      goToLogin()
-    }, 3000)
     
   } catch (apiError) {
     console.error('Registration error:', apiError)

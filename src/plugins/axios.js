@@ -34,13 +34,19 @@ api.interceptors.request.use(
     }
     
     // Add tenant ID header for proper tenant isolation
-    const tenantId = localStorage.getItem('current_tenant_id')
-    if (tenantId) {
-      config.headers['X-Tenant-ID'] = tenantId
-      
-      // Log tenant header in development
-      if (import.meta.env.DEV) {
-        console.log(`Request with Tenant ID: ${tenantId}`)
+    // IMPORTANT: Skip tenant ID for auth endpoints to avoid CORS issues
+    const isAuthEndpoint = config.url.includes('/auth/') || config.url.includes('/v1/auth/')
+    
+    // Only add Tenant ID for non-auth endpoints
+    if (!isAuthEndpoint) {
+      const tenantId = localStorage.getItem('current_tenant_id')
+      if (tenantId) {
+        config.headers['X-Tenant-ID'] = tenantId
+        
+        // Log tenant header in development
+        if (import.meta.env.DEV) {
+          console.log(`Request with Tenant ID: ${tenantId}`)
+        }
       }
     }
     

@@ -13,15 +13,15 @@ class SuperAdminService {
     try {
       console.log('Service: Fetching pending tenants...')
       
-      // Use the correct endpoint from api.js
-      const response = await api.get(endpoints.superAdmin.pendingTenants)
+      // Updated to use query parameter instead of /pending path
+      const response = await api.get(`${this.baseURL}/tenants?status=pending`)
       
       console.log('Service: Raw API response:', response)
       
       // The backend returns pending_tenants wrapped in the response
       return {
         success: true,
-        data: response.pending_tenants || response || [], 
+        data: response.pending_tenants || response.data || response || [], 
         message: 'Tenants fetched successfully'
       }
     } catch (error) {
@@ -115,7 +115,8 @@ class SuperAdminService {
         status: "APPROVED"
       }
       
-      const response = await api.patch(endpoints.superAdmin.updateTenantApproval(tenantId), payload)
+      // Updated to use the actual endpoint from backend
+      const response = await api.patch(`${this.baseURL}/tenants/${tenantId}/approval`, payload)
       console.log('Tenant approval response:', response)
       
       return {
@@ -158,7 +159,8 @@ class SuperAdminService {
         reason: data.reason || data.notes || ''
       }
 
-      const response = await api.patch(endpoints.superAdmin.updateTenantApproval(tenantId), payload)
+      // Updated to use the actual endpoint from backend
+      const response = await api.patch(`${this.baseURL}/tenants/${tenantId}/approval`, payload)
       console.log('Tenant rejection response:', response)
       
       return {
@@ -238,8 +240,8 @@ class SuperAdminService {
     try {
       console.log('Fetching pending entities from API...')
       
-      // Use the correct endpoint from api.js
-      const response = await api.get(endpoints.superAdmin.pendingEntities)
+      // Updated to use query parameter instead of /pending path
+      const response = await api.get(`${this.baseURL}/entities?status=PENDING`)
       console.log('API response for pending entities:', response)
       
       // Handle the response format properly based on the backend structure
@@ -256,6 +258,13 @@ class SuperAdminService {
           success: true,
           data: response,
           total: response.length,
+          message: 'Pending entities fetched successfully'
+        }
+      } else if (response && response.data && Array.isArray(response.data)) {
+        return {
+          success: true,
+          data: response.data,
+          total: response.total || response.data.length,
           message: 'Pending entities fetched successfully'
         }
       } else if (response && Array.isArray(response.entities)) {
@@ -305,7 +314,8 @@ class SuperAdminService {
         notes: data?.notes || ''
       }
       
-      const response = await api.patch(endpoints.superAdmin.updateEntityApproval(entityId), payload)
+      // Updated to use the actual endpoint from backend
+      const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload)
       console.log('Entity approval response:', response)
       
       return {
@@ -342,7 +352,8 @@ class SuperAdminService {
         reason: data.reason || data.notes || ''
       }
       
-      const response = await api.patch(endpoints.superAdmin.updateEntityApproval(entityId), payload)
+      // Updated to use the actual endpoint from backend
+      const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload)
       console.log('Entity rejection response:', response)
       
       return {

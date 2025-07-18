@@ -3,14 +3,10 @@
     <!-- Debug Info (remove in production) -->
     <div class="bg-gray-100 p-4 rounded-lg mb-4 text-xs font-mono overflow-auto max-h-40" v-if="debugMode">
       <div class="mb-2 font-bold">Debug Information:</div>
-      <div v-if="selectedTenant">Selected Tenant: ID={{ selectedTenant.ID }}, Name={{ getTenantName(selectedTenant) }}</div>
+      <div v-if="selectedTenant">Selected Tenant: ID={{ selectedTenant.id || selectedTenant.ID }}, Name={{ getTenantName(selectedTenant) }}</div>
       <div>Tenant Count: {{ allTenants.length }}</div>
-      <div>Data Source: {{ usingMockData ? 'MOCK DATA (API 404)' : 'Live API' }}</div>
       <div class="mt-2 flex gap-2">
         <button @click="debugTenantData" class="px-3 py-1 bg-gray-200 rounded text-xs">Run API Debug</button>
-        <button @click="toggleMockData" class="px-3 py-1 bg-blue-200 rounded text-xs">
-          {{ usingMockData ? 'Try Real API' : 'Use Mock Data' }}
-        </button>
       </div>
     </div>
 
@@ -68,31 +64,18 @@
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
     </div>
 
-    <!-- Mock Data Banner -->
-    <div v-if="usingMockData && !loading" class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
-      <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-        </svg>
-        <div>
-          <span class="font-medium text-yellow-800">Using Demo Data:</span> 
-          <span class="text-yellow-700">API endpoint not available. Using mock data for demonstration.</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Tenant Applications List -->
     <div v-if="!loading && filteredTenants.length > 0" class="space-y-4">
       <div
         v-for="(tenant, idx) in paginatedTenants"
-        :key="tenant.ID || idx"
+        :key="tenant.id || tenant.ID || idx"
         class="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200"
       >
         <div class="p-6">
           <!-- Tenant ID Debug (remove in production) -->
           <div v-if="debugMode" class="bg-gray-100 p-2 mb-3 rounded text-xs">
-            <span class="font-bold">ID:</span> {{ tenant.ID || 'Not available' }} |
-            <span class="font-bold">Status:</span> {{ tenant.Status || 'Not available' }}
+            <span class="font-bold">ID:</span> {{ tenant.id || tenant.ID || 'Not available' }} |
+            <span class="font-bold">Status:</span> {{ tenant.status || tenant.Status || 'Not available' }}
           </div>
           
           <!-- Header Row -->
@@ -117,13 +100,13 @@
             <!-- Status & Date -->
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <span
-                :class="getStatusBadgeClass(tenant.Status)"
+                :class="getStatusBadgeClass(tenant.status || tenant.Status)"
                 class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               >
-                {{ tenant.Status || 'pending' }}
+                {{ tenant.status || tenant.Status || 'pending' }}
               </span>
               <span class="text-xs text-gray-500">
-                Applied: {{ formatDate(tenant.CreatedAt) }}
+                Applied: {{ formatDate(tenant.created_at || tenant.CreatedAt) }}
               </span>
             </div>
           </div>
@@ -217,13 +200,6 @@
       <p class="mt-2 text-sm text-gray-500">
         {{ statusFilter ? `No tenants with "${statusFilter}" status found` : 'Try refreshing or checking back later' }}
       </p>
-      <button 
-        v-if="!usingMockData"
-        @click="enableMockData" 
-        class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm"
-      >
-        Use Demo Data Instead
-      </button>
     </div>
 
     <!-- Rejection Modal -->
@@ -233,7 +209,7 @@
         
         <!-- Debug info -->
         <div v-if="debugMode" class="bg-gray-100 p-2 mb-3 rounded text-xs">
-          <div><span class="font-bold">Selected Tenant ID:</span> {{ selectedTenant?.ID }}</div>
+          <div><span class="font-bold">Selected Tenant ID:</span> {{ selectedTenant?.id || selectedTenant?.ID }}</div>
           <div><span class="font-bold">Selected Tenant Name:</span> {{ getTenantName(selectedTenant) }}</div>
         </div>
         
@@ -303,7 +279,6 @@ export default {
     const debugMode = ref(false)
     const showApiDebugModal = ref(false)
     const apiDebugInfo = ref('')
-    const usingMockData = ref(false)
     
     // Simple rejection modal
     const showRejectModal = ref(false)
@@ -330,19 +305,22 @@ export default {
       allTenants.value.filter(t => isStatusRejected(t)).length
     )
     
-    // Status check helpers - FIXED to use correct capitalization (Status instead of status)
+    // Status check helpers - Updated to check both uppercase and lowercase properties
     const isStatusPending = (tenant) => {
-      const status = tenant?.Status?.toLowerCase() || '';
+      if (!tenant) return false;
+      const status = (tenant.status || tenant.Status || '').toLowerCase();
       return status === 'pending' || status === 'pending approval' || status === '';
     }
     
     const isStatusApproved = (tenant) => {
-      const status = tenant?.Status?.toLowerCase() || '';
+      if (!tenant) return false;
+      const status = (tenant.status || tenant.Status || '').toLowerCase();
       return status === 'active' || status === 'approved';
     }
     
     const isStatusRejected = (tenant) => {
-      const status = tenant?.Status?.toLowerCase() || '';
+      if (!tenant) return false;
+      const status = (tenant.status || tenant.Status || '').toLowerCase();
       return status === 'rejected' || status === 'declined';
     }
     
@@ -430,26 +408,30 @@ export default {
       return pages
     })
     
-    // Helper methods for displaying tenant information - FIXED for capitalization
+    // Helper methods for displaying tenant information
     const getTenantName = (tenant) => {
       if (!tenant) return 'Unknown Tenant';
       
-      if (tenant.FullName) return tenant.FullName;
+      // Check both uppercase and lowercase properties
       if (tenant.full_name) return tenant.full_name;
+      if (tenant.FullName) return tenant.FullName;
       if (tenant.fullName) return tenant.fullName;
       if (tenant.name) return tenant.name;
       if (tenant.Name) return tenant.Name;
-      if (tenant.Email) return tenant.Email.split('@')[0];
-      if (tenant.email) return tenant.email.split('@')[0];
       
-      return tenant.ID ? `User ${tenant.ID}` : 'Unknown Tenant';
+      // Check email as fallback
+      if (tenant.email) return tenant.email.split('@')[0];
+      if (tenant.Email) return tenant.Email.split('@')[0];
+      
+      // Return ID if available
+      return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant';
     }
     
     const getTenantEmail = (tenant) => {
       if (!tenant) return 'No email provided';
       
-      if (tenant.Email) return tenant.Email;
       if (tenant.email) return tenant.email;
+      if (tenant.Email) return tenant.Email;
       if (tenant.email_address) return tenant.email_address;
       if (tenant.EmailAddress) return tenant.EmailAddress;
       
@@ -516,47 +498,16 @@ export default {
       }
     }
     
-    // Enable mock data function
-    const enableMockData = () => {
-      usingMockData.value = true
-      tenants.value = [...superAdminService.getMockPendingTenants()]
-      allTenants.value = [...superAdminService.getMockAllTenants()]
-      toast.info('Using demo data for demonstration')
-    }
-    
-    // Toggle mock data
-    const toggleMockData = () => {
-      if (usingMockData.value) {
-        usingMockData.value = false
-        tenants.value = []
-        allTenants.value = []
-        loadTenants()
-      } else {
-        enableMockData()
-      }
-    }
-    
-    // Load pending tenants (default view) - COMPLETELY REWRITTEN
+    // Load pending tenants (default view)
     const loadTenants = async () => {
       loading.value = true
       
       try {
         console.log('Loading tenant data...')
         
-        // If using mock data, load that instead of API
-        if (usingMockData.value) {
-          tenants.value = [...superAdminService.getMockPendingTenants()]
-          allTenants.value = [...superAdminService.getMockAllTenants()]
-          console.log('Loaded mock tenant data')
-          toast.success(`Loaded ${tenants.value.length} demo tenant applications`)
-          loading.value = false
-          return
-        }
-        
-        // Try different approaches to fetch real data
         try {
           // First try the correct API endpoint
-          const response = await fetch('/api/v1/superadmin/tenants/pending', {
+          const response = await fetch('/api/v1/superadmin/tenants?status=pending', {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -569,15 +520,19 @@ export default {
           const data = await response.json()
           console.log('API response:', data)
           
-          if (data && data.pending_tenants) {
-            tenants.value = data.pending_tenants
-            allTenants.value = data.pending_tenants
+          if (data && data.data) {
+            tenants.value = data.data
+            allTenants.value = data.data
+            console.log(`Loaded ${tenants.value.length} tenant applications from API`)
+            toast.success(`Loaded ${tenants.value.length} tenant applications`)
+          } else if (data) {
+            tenants.value = data
+            allTenants.value = data
             console.log(`Loaded ${tenants.value.length} tenant applications from API`)
             toast.success(`Loaded ${tenants.value.length} tenant applications`)
           } else {
             console.warn('API returned unexpected format:', data)
             toast.error('Could not load tenant data: unexpected API response format')
-            enableMockData() // Fall back to mock data
           }
         } catch (apiError) {
           console.error('Error calling API directly:', apiError)
@@ -611,21 +566,17 @@ export default {
                 toast.info('No pending tenant applications found')
               }
             } else {
-              // If both approaches fail, use mock data
               console.warn('Service call failed or returned unexpected format')
-              toast.error('Could not load tenant data from API. Using demo data.')
-              enableMockData()
+              toast.error('Could not load tenant data from API')
             }
           } catch (serviceError) {
             console.error('Error calling service:', serviceError)
-            toast.error('Could not load tenant data. Using demo data.')
-            enableMockData()
+            toast.error('Could not load tenant data')
           }
         }
       } catch (error) {
         console.error('Error in loadTenants:', error)
-        toast.error('Error loading tenant data. Using demo data.')
-        enableMockData()
+        toast.error('Error loading tenant data')
       } finally {
         loading.value = false
       }
@@ -636,13 +587,6 @@ export default {
       loading.value = true
       
       try {
-        if (usingMockData.value) {
-          allTenants.value = [...superAdminService.getMockAllTenants()]
-          toast.success(`Loaded ${allTenants.value.length} demo tenants`)
-          loading.value = false
-          return
-        }
-        
         const response = await superAdminService.getAllTenants()
         
         if (response && response.success && Array.isArray(response.data)) {
@@ -672,9 +616,9 @@ export default {
         debugInfo.push('==== TENANT DATA DEBUG ====\n')
         
         // 1. Test direct API call to verify backend
-        debugInfo.push('Testing direct API call to /api/v1/superadmin/tenants/pending...')
+        debugInfo.push('Testing direct API call to /api/v1/superadmin/tenants?status=pending...')
         try {
-          const response = await fetch('/api/v1/superadmin/tenants/pending', {
+          const response = await fetch('/api/v1/superadmin/tenants?status=pending', {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -690,10 +634,14 @@ export default {
             debugInfo.push(`API Response Data: ${JSON.stringify(data, null, 2)}`)
             
             // Try to load the data if not already loaded
-            if (allTenants.value.length === 0 && data && data.pending_tenants) {
-              tenants.value = data.pending_tenants
-              allTenants.value = data.pending_tenants
-              debugInfo.push(`\nAUTOMATICALLY LOADED ${data.pending_tenants.length} TENANTS FROM API RESPONSE`)
+            if (allTenants.value.length === 0 && data && data.data) {
+              tenants.value = data.data
+              allTenants.value = data.data
+              debugInfo.push(`\nAUTOMATICALLY LOADED ${data.data.length} TENANTS FROM API RESPONSE`)
+            } else if (allTenants.value.length === 0 && Array.isArray(data)) {
+              tenants.value = data
+              allTenants.value = data
+              debugInfo.push(`\nAUTOMATICALLY LOADED ${data.length} TENANTS FROM API RESPONSE`)
             }
           }
         } catch (error) {
@@ -710,7 +658,7 @@ export default {
         if (allTenants.value.length > 0) {
           const firstTenant = allTenants.value[0]
           debugInfo.push(`First Tenant Data: ${JSON.stringify(firstTenant, null, 2)}`)
-          debugInfo.push(`First Tenant ID: ${firstTenant.ID || 'Not found'}`)
+          debugInfo.push(`First Tenant ID: ${firstTenant.id || firstTenant.ID || 'Not found'}`)
           
           // List all properties that could be used as ID
           const potentialIds = ['ID', 'id', 'user_id', 'userId', '_id']
@@ -732,7 +680,7 @@ export default {
         return
       }
       
-      apiDebugInfo.value = `Testing API call for tenant ${tenant.ID || 'unknown'}...`
+      apiDebugInfo.value = `Testing API call for tenant ${tenant.id || tenant.ID || 'unknown'}...`
       showApiDebugModal.value = true
       
       try {
@@ -740,7 +688,7 @@ export default {
         debugInfo.push(`Testing API approval for tenant ${JSON.stringify(tenant, null, 2)}\n`)
         
         // Extract tenant ID with fallbacks
-        const tenantId = tenant.ID || tenant.id || tenant.user_id || tenant.userId
+        const tenantId = tenant.id || tenant.ID || tenant.user_id || tenant.userId
         
         if (!tenantId) {
           debugInfo.push('ERROR: No tenant ID found in tenant object!')
@@ -791,33 +739,41 @@ export default {
       }
     }
     
-    // COMPLETELY REWRITTEN - Using direct fetch API for more control
+    // Updated to use id instead of ID
     const handleApprove = async (tenant) => {
-      if (!tenant || !tenant.ID) {
+      if (!tenant) {
+        toast.error('Cannot approve: Missing tenant');
+        return;
+      }
+      
+      // Use lowercase id first, fall back to uppercase ID
+      const tenantId = tenant.id || tenant.ID;
+      
+      if (!tenantId) {
         toast.error('Cannot approve: Missing tenant ID');
         return;
       }
       
       isProcessing.value = true;
-      console.log(`Attempting to approve tenant ${tenant.ID} with PATCH to /api/v1/superadmin/tenants/${tenant.ID}/approval`);
+      console.log(`Attempting to approve tenant ${tenantId} with PATCH to /api/v1/superadmin/tenants/${tenantId}/approval`);
       
       try {
         // Make a direct API call to the approval endpoint
-        const response = await fetch(`/api/v1/superadmin/tenants/${tenant.ID}/approval`, {
+        const response = await fetch(`/api/v1/superadmin/tenants/${tenantId}/approval`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
           body: JSON.stringify({
-            status: 'APPROVED'
+            status: "APPROVED"
           })
         });
         
         if (response.ok) {
           const data = await response.json();
           console.log('Approval successful:', data);
-          toast.success(`Tenant ${tenant.FullName} approved successfully`);
+          toast.success(`Tenant ${getTenantName(tenant)} approved successfully`);
           
           // Refresh the tenant list
           loadTenants();
@@ -836,8 +792,17 @@ export default {
       }
     };
     
+    // Updated to use id instead of ID
     const handleRejectClick = (tenant) => {
-      if (!tenant || !tenant.ID) {
+      if (!tenant) {
+        toast.error('Cannot reject: Missing tenant');
+        return;
+      }
+      
+      // Use lowercase id first, fall back to uppercase ID
+      const tenantId = tenant.id || tenant.ID;
+      
+      if (!tenantId) {
         toast.error('Cannot reject: Missing tenant ID');
         return;
       }
@@ -847,11 +812,20 @@ export default {
       showRejectModal.value = true;
     };
     
-    // COMPLETELY REWRITTEN - Using direct fetch API for more control
+    // Updated to use id instead of ID
     const confirmReject = async () => {
       const tenant = selectedTenant.value;
       
-      if (!tenant || !tenant.ID) {
+      if (!tenant) {
+        toast.error('Cannot reject: Missing tenant');
+        showRejectModal.value = false;
+        return;
+      }
+      
+      // Use lowercase id first, fall back to uppercase ID
+      const tenantId = tenant.id || tenant.ID;
+      
+      if (!tenantId) {
         toast.error('Cannot reject: Missing tenant ID');
         showRejectModal.value = false;
         return;
@@ -866,14 +840,14 @@ export default {
       
       try {
         // Make a direct API call to the rejection endpoint
-        const response = await fetch(`/api/v1/superadmin/tenants/${tenant.ID}/approval`, {
+        const response = await fetch(`/api/v1/superadmin/tenants/${tenantId}/approval`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
           body: JSON.stringify({
-            status: 'REJECTED',
+            status: "REJECTED",
             reason: rejectReason.value
           })
         });
@@ -881,7 +855,7 @@ export default {
         if (response.ok) {
           const data = await response.json();
           console.log('Rejection successful:', data);
-          toast.success(`Tenant ${tenant.FullName} rejected successfully`);
+          toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`);
           showRejectModal.value = false;
           
           // Refresh the tenant list
@@ -946,10 +920,7 @@ export default {
       debugTenantData,
       testApprovalApi,
       showApiDebugModal,
-      apiDebugInfo,
-      usingMockData,
-      enableMockData,
-      toggleMockData
+      apiDebugInfo
     }
   }
 }

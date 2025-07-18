@@ -665,7 +665,6 @@ const loadRecentActivities = async () => {
     } catch (err) {
       console.log('API for activities not available, using mock data')
     }
-    
     // If we get here, use mock data
     console.log('DEVELOPMENT: Using mock activity data')
     
