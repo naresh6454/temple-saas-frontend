@@ -1,0 +1,179 @@
+// src/services/event.service.js
+import { apiClient } from '@/plugins/axios';
+
+const eventService = {
+  async getEvents() {
+    try {
+      const response = await apiClient.event.getAll();
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async getUpcomingEvents() {
+    try {
+      const response = await apiClient.event.getUpcoming();
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async getEventById(id) {
+    try {
+      const response = await apiClient.event.getById(id);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async getEventStats() {
+    try {
+      const response = await apiClient.event.getStats();
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async createEvent(eventData) {
+    try {
+      if (eventData instanceof FormData) {
+        const dataJson = eventData.get('data');
+        if (dataJson) {
+          const parsedData = JSON.parse(dataJson);
+          const date = new Date(parsedData.eventDate);
+          const dateStr = date.toISOString().split('T')[0];
+          const timeStr = date.toTimeString().slice(0, 5);
+
+          const apiData = {
+            title: parsedData.title,
+            description: parsedData.description || '',
+            event_type: parsedData.type || parsedData.eventType || 'other',
+            event_date: dateStr,
+            event_time: timeStr,
+            location: parsedData.location || 'Temple Premises',
+            is_active: parsedData.isActive !== undefined ? parsedData.isActive : true
+          };
+
+          const response = await apiClient.event.create(apiData);
+          return response.data;
+        }
+      } else {
+        const apiData = {
+          title: eventData.title,
+          description: eventData.description || '',
+          event_type: eventData.type || eventData.eventType || 'other',
+          event_date: eventData.event_date || eventData.date,
+          event_time: eventData.event_time || eventData.time,
+          location: eventData.location || 'Temple Premises',
+          is_active: eventData.isActive !== undefined ? eventData.isActive : true
+        };
+
+        const response = await apiClient.event.create(apiData);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async updateEvent(id, eventData) {
+    try {
+      console.warn('UPDATE EVENT: No update endpoint exists. Creating replacement instead.');
+
+      const apiData = {
+        title: eventData.title,
+        description: eventData.description || '',
+        event_type: eventData.type || eventData.eventType || 'other',
+        event_date: eventData.event_date || eventData.date,
+        event_time: eventData.event_time || eventData.time,
+        location: eventData.location || 'Temple Premises',
+        is_active: eventData.isActive !== undefined ? eventData.isActive : true
+      };
+
+      const response = await apiClient.event.create(apiData);
+
+      return {
+        ...response.data,
+        message: 'Event created as replacement (no update endpoint)',
+        wasUpdate: true,
+        replacesId: id
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async deleteEvent(id) {
+    try {
+      console.warn('DELETE EVENT: No delete endpoint exists. Using soft delete.');
+
+      const event = await this.getEventById(id);
+      if (!event) throw new Error('Event not found');
+
+      const apiData = {
+        title: event.title,
+        description: event.description,
+        event_type: event.event_type || event.type,
+        event_date: event.event_date,
+        event_time: event.event_time,
+        location: event.location,
+        is_active: false
+      };
+
+      const response = await apiClient.event.softDelete(apiData);
+
+      return {
+        ...response.data,
+        message: 'Event marked as inactive (soft delete)',
+        replacesId: id
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async registerForEvent(eventId) {
+    try {
+      const response = await apiClient.event.createRSVP(eventId);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async cancelRegistration(eventId) {
+    try {
+      console.warn('CANCEL RSVP: No endpoint exists.');
+      throw new Error('RSVP cancellation not supported by backend API');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  async getEventRSVPs(eventId) {
+    try {
+      const response = await apiClient.event.getRSVPs(eventId);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  handleError(error) {
+    if (error.response?.data?.message) {
+      return new Error(error.response.data.message);
+    } else if (error.response?.data?.error) {
+      return new Error(error.response.data.error);
+    } else if (error.message) {
+      return new Error(error.message);
+    } else {
+      return new Error('An unexpected error occurred');
+    }
+  }
+};
+
+export default eventService;
