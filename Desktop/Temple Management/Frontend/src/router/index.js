@@ -399,6 +399,17 @@ const routes = [
       allowedRoles: ['devotee']
     },
     children: [
+      // ADD THIS NEW ROUTE FOR PROFILE CREATION
+      {
+        path: 'profile/create',
+        name: 'DevoteeEntityProfileCreation',
+        component: ProfileCreation,
+        props: true,
+        meta: { 
+          title: 'Complete Profile',
+          breadcrumb: 'Profile Creation'
+        }
+      },
       {
         path: 'dashboard',
         name: 'DevoteeDashboard',

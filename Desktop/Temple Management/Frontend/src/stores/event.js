@@ -183,27 +183,21 @@ export const useEventStore = defineStore('event', () => {
     }
   }
 
-  const updateEvent = async (id, updates) => {
+const updateEvent = async (id, updates) => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await eventService.updateEvent(id, updates)
-    
-    // Check if this was a workaround update (creating a new event)
-    if (response.wasUpdate) {
-      // Remove the old event from the list
-      events.value = events.value.filter(e => e.id !== Number(id))
-      
-      // Add the new event to the list if it exists
-      if (response.id) {
-        const newEvent = await eventService.getEventById(response.id)
-        events.value.push(normalizeEvent(newEvent))
-      }
-      
-      toast.info('Event updated by creating a new version')
+
+    // Replace the updated event in the list
+    const updatedEvent = normalizeEvent(response)
+    const index = events.value.findIndex(e => e.id === Number(id))
+    if (index !== -1) {
+      events.value[index] = updatedEvent
     }
-    
+
+    toast.success('Event updated successfully')
     return response
   } catch (err) {
     error.value = err.message || `Failed to update event with ID: ${id}`
@@ -215,17 +209,17 @@ export const useEventStore = defineStore('event', () => {
   }
 }
 
-  const deleteEvent = async (id) => {
+
+const deleteEvent = async (id) => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await eventService.deleteEvent(id)
-    
-    // Remove event from the list
+
     events.value = events.value.filter(e => e.id !== Number(id))
-    
-    toast.success('Event marked as inactive')
+
+    toast.success('Event deleted successfully')
     return response
   } catch (err) {
     error.value = err.message || `Failed to delete event with ID: ${id}`
@@ -236,6 +230,7 @@ export const useEventStore = defineStore('event', () => {
     loading.value = false
   }
 }
+
 
   const setFilters = (newFilters) => {
     filters.value = { ...filters.value, ...newFilters }
@@ -255,35 +250,53 @@ export const useEventStore = defineStore('event', () => {
   }
 
   // Helper function to normalize event data from backend
-  const normalizeEvent = (event) => {
-    if (!event) return null
-    
-    // Combine date and time into a single ISO string if needed
-    let eventDate = event.event_date || event.eventDate
-    const eventTime = event.event_time || event.eventTime
-    
-    if (eventTime && typeof eventDate === 'string' && !eventDate.includes('T')) {
-      // If date is in format YYYY-MM-DD and time is separate
-      const timeStr = typeof eventTime === 'string' ? eventTime : 
-                     (eventTime instanceof Date ? eventTime.toTimeString().slice(0, 5) : '00:00')
-      eventDate = `${eventDate}T${timeStr}`
-    }
-    
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      type: event.event_type || event.eventType || event.type,
-      eventDate: new Date(eventDate).toISOString(),
-      location: event.location,
-      isActive: event.is_active !== false,
-      createdBy: event.created_by || event.createdBy,
-      createdAt: event.created_at || event.createdAt,
-      entityId: event.entity_id || event.entityId,
-      currentAttendees: event.rsvp_count || event.RSVPCount || 0,
-      status: getEventStatus(eventDate)
-    }
+const normalizeEvent = (event) => {
+  if (!event) return null
+
+  let rawDate = event.event_date || event.eventDate || ''
+  let rawTime = event.event_time || event.eventTime || ''
+
+  let fullDateTimeString = ''
+
+  // Safely build ISO datetime
+  if (typeof rawDate === 'string' && rawDate.includes('T')) {
+    fullDateTimeString = rawDate
+  } else if (rawDate && rawTime && rawTime.match(/^\d{2}:\d{2}/)) {
+    fullDateTimeString = `${rawDate}T${rawTime}`
+  } else if (rawDate) {
+    fullDateTimeString = `${rawDate}T00:00`
+  } else {
+    console.warn('Missing event_date for event:', event)
+    fullDateTimeString = new Date().toISOString()
   }
+
+  let isoDateString = ''
+  try {
+    const date = new Date(fullDateTimeString)
+    if (isNaN(date.getTime())) throw new Error('Invalid Date')
+    isoDateString = date.toISOString()
+  } catch (err) {
+    console.warn('Invalid date-time during normalizeEvent:', fullDateTimeString, err)
+    isoDateString = new Date().toISOString() // Fallback to now
+  }
+
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    type: event.event_type || event.eventType || event.type,
+    eventDate: isoDateString,
+    location: event.location,
+    isActive: event.is_active !== false,
+    createdBy: event.created_by || event.createdBy,
+    createdAt: event.created_at || event.createdAt,
+    entityId: event.entity_id || event.entityId,
+    currentAttendees: event.rsvp_count || event.RSVPCount || 0,
+    status: getEventStatus(isoDateString)
+  }
+}
+
+
   
   const normalizeEvents = (eventsData) => {
     if (!eventsData || !Array.isArray(eventsData)) return []

@@ -1,4 +1,4 @@
-// src/router/routes/devotee.js 
+// src/router/routes/devotee.js
 import TempleSelection from '@/views/devotee/TempleSelection.vue' 
 import ProfileCreation from '@/views/devotee/ProfileCreation.vue' 
 import DevoteeDashboard from '@/views/devotee/DevoteeDashboard.vue' 
@@ -19,8 +19,9 @@ export default [
       role: 'devotee'     
     }   
   },   
+  // Path with entity ID (for after temple selection)
   {     
-    path: 'profile/create',     
+    path: '/entity/:id/devotee/profile/create',     
     name: 'DevoteeProfileCreation',     
     component: ProfileCreation,     
     meta: {       
@@ -28,9 +29,21 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  },   
+  },
+  // Path without entity ID (fallback)
   {     
-    path: 'profile/edit',     
+    path: 'profile/create',     
+    name: 'DevoteeProfileCreationNoEntity',     
+    component: ProfileCreation,     
+    meta: {       
+      title: 'Complete Your Profile',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  },   
+  // Path with entity ID
+  {     
+    path: '/entity/:id/devotee/profile/edit',     
     name: 'ProfileEdit',     
     component: ProfileEdit,     
     meta: {       
@@ -38,9 +51,21 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  },   
+  },
+  // Path without entity ID (fallback)   
   {     
-    path: 'dashboard',     
+    path: 'profile/edit',     
+    name: 'ProfileEditNoEntity',     
+    component: ProfileEdit,     
+    meta: {       
+      title: 'Edit Profile',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  },
+  // Path with entity ID   
+  {     
+    path: '/entity/:id/devotee/dashboard',     
     name: 'DevoteeDashboard',     
     component: DevoteeDashboard,     
     beforeEnter: [checkProfileCompleted],     
@@ -49,9 +74,22 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  },   
+  },
+  // Path without entity ID (fallback)   
   {     
-    path: 'seva-booking',     
+    path: 'dashboard',     
+    name: 'DevoteeDashboardNoEntity',     
+    component: DevoteeDashboard,     
+    beforeEnter: [checkProfileCompleted],     
+    meta: {       
+      title: 'Devotee Dashboard',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  },
+  // Same pattern for other routes   
+  {     
+    path: '/entity/:id/devotee/seva-booking',     
     name: 'SevaBooking',     
     component: SevaBooking,     
     beforeEnter: [checkProfileCompleted],     
@@ -60,9 +98,20 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  },   
+  },
   {     
-    path: 'donations',     
+    path: 'seva-booking',     
+    name: 'SevaBookingNoEntity',     
+    component: SevaBooking,     
+    beforeEnter: [checkProfileCompleted],     
+    meta: {       
+      title: 'Book Seva',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  },
+  {     
+    path: '/entity/:id/devotee/donations',     
     name: 'DonationHistory',     
     component: DonationHistory,     
     beforeEnter: [checkProfileCompleted],     
@@ -71,9 +120,20 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  },   
+  },
   {     
-    path: 'events',     
+    path: 'donations',     
+    name: 'DonationHistoryNoEntity',     
+    component: DonationHistory,     
+    beforeEnter: [checkProfileCompleted],     
+    meta: {       
+      title: 'My Donations',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  },
+  {     
+    path: '/entity/:id/devotee/events',     
     name: 'MyEvents',     
     component: MyEvents,     
     beforeEnter: [checkProfileCompleted],     
@@ -82,5 +142,16 @@ export default [
       requiresAuth: true,       
       role: 'devotee'     
     }   
-  } 
+  },
+  {     
+    path: 'events',     
+    name: 'MyEventsNoEntity',     
+    component: MyEvents,     
+    beforeEnter: [checkProfileCompleted],     
+    meta: {       
+      title: 'My Events',       
+      requiresAuth: true,       
+      role: 'devotee'     
+    }   
+  }
 ]

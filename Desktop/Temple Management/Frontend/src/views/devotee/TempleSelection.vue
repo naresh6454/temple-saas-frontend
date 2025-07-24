@@ -134,12 +134,12 @@
                 </span>
               </div>
 
-              <div class="flex items-center text-sm text-gray-700 font-side">
+              <!-- <div class="flex items-center text-sm text-gray-700 font-side">
                 <svg class="h-4 w-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                 </svg>
                 <span class="font-medium">{{ temple.devoteeCount || temple.DevoteeCount || 0 }}</span> devotees
-              </div>
+              </div> -->
             </div>
 
             <!-- Description -->
@@ -147,7 +147,7 @@
               {{ temple.description || temple.Description }}
             </p>
 
-            <!-- Join Button - UPDATED -->
+            <!-- Join Button -->
             <button
               @click="selectTemple(temple)"
               :disabled="joiningTemple === (temple.id || temple.ID)"
@@ -187,7 +187,34 @@
             You're about to join {{ selectedTemple?.name || selectedTemple?.Name }} as a devotee. 
             You'll be able to book sevas, make donations, and participate in temple events.
           </p>
-          <div class="flex flex-col sm:flex-row gap-3">
+          
+          <!-- SUCCESS CONFIRMATION - Show after joining -->
+          <div v-if="joinSuccess" class="mb-6">
+            <div class="bg-green-50 text-green-800 p-4 rounded-lg mb-4">
+              <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Successfully joined temple!
+            </div>
+            <p class="text-gray-700 mb-4">What would you like to do next?</p>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button
+                @click="navigateToProfileCreation"
+                class="flex-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium py-2 px-4 rounded-lg"
+              >
+                Complete Profile
+              </button>
+              <button
+                @click="navigateToDashboard"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+          
+          <!-- INITIAL CONFIRMATION - Show before joining -->
+          <div v-else class="flex flex-col sm:flex-row gap-3">
             <button
               @click="closeModal"
               class="flex-1 bg-white hover:bg-gray-50 text-indigo-700 font-medium py-2 px-4 rounded-lg border border-indigo-200"
@@ -235,6 +262,7 @@ const isJoining = ref(false)
 const selectedTemple = ref(null)
 const temples = ref([])
 const joinedTemples = ref([])
+const joinSuccess = ref(false)
 
 // Load joined temples from localStorage
 const loadJoinedTemples = () => {
@@ -310,7 +338,7 @@ const resetFilters = () => {
   selectedCategory.value = ''
 }
 
-// Open confirmation modal - UPDATED: removed the early return for joined temples
+// Open confirmation modal
 const selectTemple = (temple) => {
   selectedTemple.value = temple
   showConfirmModal.value = true
@@ -319,6 +347,8 @@ const selectTemple = (temple) => {
 // Close modal
 const closeModal = () => {
   showConfirmModal.value = false
+  joinSuccess.value = false
+  selectedTemple.value = null
 }
 
 // Join temple after confirmation
@@ -361,14 +391,13 @@ const confirmJoinTemple = async () => {
     
     // Store selected temple info in localStorage
     localStorage.setItem('selectedEntityId', templeId.toString())
+    localStorage.setItem('current_tenant_id', templeId.toString())
     localStorage.setItem('selectedTempleName', selectedTemple.value.name || selectedTemple.value.Name)
     
+    // Set join success to show the next options
+    joinSuccess.value = true
+    
     showToast('Successfully joined temple!', 'success')
-    closeModal()
-    
-    // Navigate to entity page for the joined temple
-    navigateToEntityPage(templeId)
-    
   } catch (error) {
     console.error('Error joining temple:', error)
     showToast('Failed to join temple. Please try again.', 'error')
@@ -378,9 +407,15 @@ const confirmJoinTemple = async () => {
   }
 }
 
-// Navigate to entity management page
-const navigateToEntityPage = (entityId) => {
-  router.push(`/entity/${entityId}/devotee/dashboard`)
+// Navigation functions
+const navigateToProfileCreation = () => {
+  const templeId = selectedTemple.value.id || selectedTemple.value.ID
+  router.push(`/entity/${templeId}/devotee/profile/create`)
+}
+
+const navigateToDashboard = () => {
+  const templeId = selectedTemple.value.id || selectedTemple.value.ID
+  router.push(`/entity/${templeId}/devotee/dashboard`)
 }
 
 // Fetch temples from the backend

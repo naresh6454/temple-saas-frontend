@@ -81,60 +81,41 @@ const eventService = {
   },
 
   async updateEvent(id, eventData) {
-    try {
-      console.warn('UPDATE EVENT: No update endpoint exists. Creating replacement instead.');
+  try {
+    const apiData = {
+      title: eventData.title,
+      description: eventData.description || '',
+      event_type: eventData.type || eventData.eventType || 'other',
+      event_date: eventData.event_date || eventData.date,
+      event_time: eventData.event_time || eventData.time,
+      location: eventData.location || 'Temple Premises',
+      is_active: eventData.isActive !== undefined ? eventData.isActive : true
+    };
 
-      const apiData = {
-        title: eventData.title,
-        description: eventData.description || '',
-        event_type: eventData.type || eventData.eventType || 'other',
-        event_date: eventData.event_date || eventData.date,
-        event_time: eventData.event_time || eventData.time,
-        location: eventData.location || 'Temple Premises',
-        is_active: eventData.isActive !== undefined ? eventData.isActive : true
-      };
+    const response = await apiClient.event.update(id, apiData);
 
-      const response = await apiClient.event.create(apiData);
+    return {
+      ...response.data,
+      message: 'Event updated successfully',
+      wasUpdate: true,
+      id
+    };
+  } catch (error) {
+    throw this.handleError(error);
+  }
+},
 
-      return {
-        ...response.data,
-        message: 'Event created as replacement (no update endpoint)',
-        wasUpdate: true,
-        replacesId: id
-      };
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  },
-
-  async deleteEvent(id) {
-    try {
-      console.warn('DELETE EVENT: No delete endpoint exists. Using soft delete.');
-
-      const event = await this.getEventById(id);
-      if (!event) throw new Error('Event not found');
-
-      const apiData = {
-        title: event.title,
-        description: event.description,
-        event_type: event.event_type || event.type,
-        event_date: event.event_date,
-        event_time: event.event_time,
-        location: event.location,
-        is_active: false
-      };
-
-      const response = await apiClient.event.softDelete(apiData);
-
-      return {
-        ...response.data,
-        message: 'Event marked as inactive (soft delete)',
-        replacesId: id
-      };
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  },
+async deleteEvent(id) {
+  try {
+    const response = await apiClient.event.delete(id);
+    return {
+      message: 'Event deleted successfully',
+      id
+    };
+  } catch (error) {
+    throw this.handleError(error);
+  }
+},
 
   async registerForEvent(eventId) {
     try {

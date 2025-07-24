@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 // Base URL Configuration
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const baseURL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL;
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -158,10 +158,8 @@ const eventAPI = {
   getById: (id) => api.get(`/v1/events/${id}`),
   getStats: () => api.get('/v1/events/stats'),
   create: (eventData) => api.post('/v1/events', eventData),
-  softDelete: (eventData) => api.post('/v1/events', {
-    ...eventData,
-    is_active: false
-  }),
+  update: (id, eventData) => api.put(`/v1/events/${id}`, eventData),
+  delete: (id) => api.delete(`/v1/events/${id}`),
   getRSVPs: (eventId) => api.get(`/v1/event-rsvps/${eventId}`),
   createRSVP: (eventId) => api.post(`/v1/event-rsvps/${eventId}`, {})
 }

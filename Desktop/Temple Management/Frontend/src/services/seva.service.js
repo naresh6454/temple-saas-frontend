@@ -10,8 +10,8 @@ class SevaService {
    */
   async getSevas(entityId, params = {}) {
     try {
-      // Match backend route GET /sevas/ with entity_id as a query param
-      const response = await api.get('/sevas', { 
+      // Remove redundant /api prefix, as it's already in the baseURL
+      const response = await api.get('/v1/sevas', { 
         params: { ...params, entity_id: entityId } 
       })
       
@@ -39,8 +39,7 @@ class SevaService {
    */
   async getSevaById(entityId, sevaId) {
     try {
-      // Use GET /sevas/:id endpoint
-      const response = await api.get(`/sevas/${sevaId}`, {
+      const response = await api.get(`/v1/sevas/${sevaId}`, {
         params: { entity_id: entityId }
       })
       return {
@@ -59,19 +58,13 @@ class SevaService {
 
   /**
    * Create new seva
-   * @param {string} entityId - Temple ID
-   * @param {Object} sevaData - Seva information
+   * @param {Object} sevaData - Seva information with entity_id included
    * @returns {Promise<Object>} Created seva
    */
-  async createSeva(entityId, sevaData) {
+  async createSeva(sevaData) {
     try {
-      // Match backend route POST /sevas/
-      const payload = {
-        ...sevaData,
-        entity_id: entityId
-      }
-      
-      const response = await api.post('/sevas', payload)
+      console.log('Creating seva with data:', sevaData)
+      const response = await api.post('/v1/sevas', sevaData)
       
       return {
         success: true,
@@ -90,21 +83,14 @@ class SevaService {
 
   /**
    * Update seva
-   * @param {string} entityId - Temple ID
    * @param {string} sevaId - Seva ID
    * @param {Object} sevaData - Updated seva information
    * @returns {Promise<Object>} Updated seva
    */
-  async updateSeva(entityId, sevaId, sevaData) {
+  async updateSeva(sevaId, sevaData) {
     try {
-      // Since there's no direct PUT /sevas/:id in your routes, we'll use the same path
-      // but make sure to include entity_id in the payload
-      const payload = {
-        ...sevaData,
-        entity_id: entityId
-      }
-      
-      const response = await api.put(`/sevas/${sevaId}`, payload)
+      console.log('Updating seva with ID:', sevaId, 'Data:', sevaData)
+      const response = await api.put(`/v1/sevas/${sevaId}`, sevaData)
       
       return {
         success: true,
@@ -123,17 +109,12 @@ class SevaService {
 
   /**
    * Delete seva
-   * @param {string} entityId - Temple ID
    * @param {string} sevaId - Seva ID
    * @returns {Promise<Object>} Success status
    */
-  async deleteSeva(entityId, sevaId) {
+  async deleteSeva(sevaId) {
     try {
-      // Since there's no direct DELETE /sevas/:id in your routes, we'll use the same path
-      // but include entity_id as a query param
-      await api.delete(`/sevas/${sevaId}`, {
-        params: { entity_id: entityId }
-      })
+      await api.delete(`/v1/sevas/${sevaId}`)
       
       return {
         success: true,
@@ -150,15 +131,11 @@ class SevaService {
 
   /**
    * Get seva bookings for entity (temple)
-   * @param {string} entityId - Temple ID
    * @returns {Promise<Object>} Entity seva bookings
    */
-  async getEntityBookings(entityId) {
+  async getEntityBookings() {
     try {
-      // Match backend route GET /sevas/entity-bookings
-      const response = await api.get('/sevas/entity-bookings', {
-        params: { entity_id: entityId }
-      })
+      const response = await api.get('/v1/sevas/entity-bookings')
       
       return {
         success: true,
@@ -177,37 +154,6 @@ class SevaService {
   }
 
   /**
-   * Book a seva for devotee
-   * @param {string} entityId - Temple ID
-   * @param {Object} bookingData - Booking information
-   * @returns {Promise<Object>} Booking confirmation
-   */
-  async bookSeva(entityId, bookingData) {
-    try {
-      // Match backend route POST /sevas/bookings
-      const payload = {
-        ...bookingData,
-        entity_id: entityId
-      }
-      
-      const response = await api.post('/sevas/bookings', payload)
-      
-      return {
-        success: true,
-        data: response.data,
-        message: 'Seva booked successfully'
-      }
-    } catch (error) {
-      console.error('Error booking seva:', error)
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Failed to book seva',
-        errors: error.response?.data?.errors || {}
-      }
-    }
-  }
-
-  /**
    * Update booking status (approve/reject)
    * @param {string} bookingId - Booking ID
    * @param {string} status - New status (approved/rejected)
@@ -215,8 +161,7 @@ class SevaService {
    */
   async updateBookingStatus(bookingId, status) {
     try {
-      // Match backend route PATCH /sevas/bookings/:id/status
-      const response = await api.patch(`/sevas/bookings/${bookingId}/status`, { 
+      const response = await api.patch(`/v1/sevas/bookings/${bookingId}/status`, { 
         status 
       })
       
@@ -230,54 +175,6 @@ class SevaService {
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to update booking status'
-      }
-    }
-  }
-
-  /**
-   * Cancel booking
-   * @param {string} bookingId - Booking ID
-   * @returns {Promise<Object>} Cancellation status
-   */
-  async cancelBooking(bookingId) {
-    try {
-      // Match backend route PATCH /sevas/bookings/:id/cancel
-      const response = await api.patch(`/sevas/bookings/${bookingId}/cancel`)
-      
-      return {
-        success: true,
-        message: 'Booking cancelled successfully'
-      }
-    } catch (error) {
-      console.error('Error cancelling booking:', error)
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Failed to cancel booking'
-      }
-    }
-  }
-
-  /**
-   * Get my seva bookings (devotee only)
-   * @returns {Promise<Object>} My bookings
-   */
-  async getMyBookings() {
-    try {
-      // Match backend route GET /sevas/my-bookings
-      const response = await api.get('/sevas/my-bookings')
-      
-      return {
-        success: true,
-        data: response.data || [],
-        pagination: response.data.pagination || {},
-        total: response.data.total || 0
-      }
-    } catch (error) {
-      console.error('Error fetching my bookings:', error)
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Failed to fetch bookings',
-        data: []
       }
     }
   }

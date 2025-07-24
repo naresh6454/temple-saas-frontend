@@ -8,13 +8,6 @@
         </svg>
         <h2 class="text-xl font-semibold mb-2">Seva Created Successfully!</h2>
         <p class="text-green-700 mb-4">Your seva has been created and is now available in the system.</p>
-        
-        <!-- <a
-          :href="`#/entity/${props.entityId}/sevas`"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          View All Sevas
-        </a> -->
       </div>
     </div>
 

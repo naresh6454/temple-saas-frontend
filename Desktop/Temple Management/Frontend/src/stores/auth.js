@@ -53,7 +53,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
       return '/tenant/dashboard'
     } else if (role === 'devotee') {
-      return entityId ? `/entity/${entityId}/devotee/dashboard` : '/devotee/temple-selection'
+      // MODIFIED: Always return temple selection for devotees
+      return '/devotee/temple-selection'
     } else if (role === 'volunteer') {
       return entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
     }
@@ -197,9 +198,8 @@ export const useAuthStore = defineStore('auth', () => {
         redirectPath = `/tenant/${tenantId}/dashboard`
         console.log(`Setting tenant-specific redirect path: ${redirectPath}`)
       } else if (userData.roleId === 3 || userData.role === 'devotee') {
-        redirectPath = userData.entityId 
-          ? `/entity/${userData.entityId}/devotee/dashboard` 
-          : '/devotee/temple-selection'
+        // MODIFIED: Always redirect devotees to temple selection regardless of entityId
+        redirectPath = '/devotee/temple-selection'
       } else if (userData.roleId === 4 || userData.role === 'volunteer') {
         redirectPath = userData.entityId 
           ? `/entity/${userData.entityId}/volunteer/dashboard` 
@@ -208,7 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
       
       console.log('Login successful, will redirect to:', redirectPath)
       
-      // DIRECT APPROACH: Force navigation to the correct URL
+      // DIRECT APPROACH: Force navigation for tenant
       if (userData.roleId === 2 || userData.role === 'templeadmin' || userData.role === 'tenant') {
         console.log('DIRECT NAVIGATION: Forcing hard redirect for tenant dashboard')
         
@@ -256,7 +256,8 @@ export const useAuthStore = defineStore('auth', () => {
       const tenantId = user.value.id || currentTenantId.value
       return `/tenant/${tenantId}/dashboard`
     } else if (role === 'devotee') {
-      return entityId ? `/entity/${entityId}/devotee/dashboard` : '/devotee/temple-selection'
+      // MODIFIED: Always return temple selection for devotees
+      return '/devotee/temple-selection'
     } else if (role === 'volunteer') {
       return entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
     }

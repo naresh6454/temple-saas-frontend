@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api, { apiClient } from '@/plugins/axios'
+import { sevaService } from '@/services/seva.service'
 
 export const useSevaStore = defineStore('seva', () => {
   // State
@@ -46,7 +46,7 @@ export const useSevaStore = defineStore('seva', () => {
   const sevaStats = computed(() => ({
     total: sevas.value.length,
     active: sevas.value.filter(s => s.is_active).length,
-    pending: sevas.value.filter(s => !s.is_active).length,
+    pending: sevas.value.filter(s => s.status === 'pending').length,
   }))
   
   // Actions - Connect to backend API
@@ -55,8 +55,9 @@ export const useSevaStore = defineStore('seva', () => {
     error.value = null
     
     try {
-      // Call API using the updated apiClient
-      const response = await apiClient.seva.getSevas(entityId)
+      console.log('Fetching sevas for entity ID:', entityId)
+      // Call API using the updated service
+      const response = await sevaService.getSevas(entityId)
       sevas.value = response.data || []
       return sevas.value
     } catch (err) {
@@ -73,7 +74,7 @@ export const useSevaStore = defineStore('seva', () => {
     error.value = null
     
     try {
-      const response = await apiClient.seva.getEntityBookings()
+      const response = await sevaService.getEntityBookings()
       sevaBookings.value = response.data || []
       return sevaBookings.value
     } catch (err) {
@@ -91,26 +92,18 @@ export const useSevaStore = defineStore('seva', () => {
     
     try {
       // Map the form data to match the Go backend model
-      const payload = {
-        name: sevaData.name,
-        description: sevaData.description,
-        price: parseFloat(sevaData.price),
-        duration: parseInt(sevaData.duration),
-        max_bookings_per_day: parseInt(sevaData.max_bookings_per_day || 10),
-        availability_schedule: sevaData.availability_schedule || '{}',
-        is_active: sevaData.is_active !== undefined ? sevaData.is_active : true
-      }
+      console.log('Creating seva with data:', sevaData)
       
-      const response = await apiClient.seva.createSeva(payload)
+      const response = await sevaService.createSeva(sevaData)
       
-      // Add the new seva to the list
-      if (response.data) {
+      // Add the new seva to the list if successful
+      if (response.success && response.data) {
         sevas.value.push(response.data)
       }
       
       return { 
-        success: true, 
-        message: 'Seva created successfully',
+        success: response.success, 
+        message: response.message || 'Seva created successfully',
         data: response.data
       }
     } catch (err) {
@@ -130,17 +123,19 @@ export const useSevaStore = defineStore('seva', () => {
     error.value = null
     
     try {
-      const response = await apiClient.seva.updateSeva(sevaId, sevaData)
+      const response = await sevaService.updateSeva(sevaId, sevaData)
       
       // Update the seva in the list
-      const index = sevas.value.findIndex(s => s.id === sevaId)
-      if (index !== -1 && response.data) {
-        sevas.value[index] = response.data
+      if (response.success && response.data) {
+        const index = sevas.value.findIndex(s => s.id === sevaId)
+        if (index !== -1) {
+          sevas.value[index] = response.data
+        }
       }
       
       return { 
-        success: true, 
-        message: 'Seva updated successfully',
+        success: response.success, 
+        message: response.message || 'Seva updated successfully',
         data: response.data
       }
     } catch (err) {
@@ -160,74 +155,57 @@ export const useSevaStore = defineStore('seva', () => {
     error.value = null
     
     try {
-      await apiClient.seva.deleteSeva(sevaId)
+      const response = await sevaService.deleteSeva(sevaId)
       
-      // Remove the seva from the list
-      sevas.value = sevas.value.filter(s => s.id !== sevaId)
+      if (response.success) {
+        // Remove the seva from the list
+        sevas.value = sevas.value.filter(s => s.id !== sevaId)
+      }
       
-      return { success: true, message: 'Seva deleted successfully' }
+      return { 
+        success: response.success, 
+        message: response.message || 'Seva deleted successfully' 
+      }
     } catch (err) {
       console.error('Error deleting seva:', err)
       error.value = err.response?.data?.error || 'Failed to delete seva'
-      return { success: false, message: error.value }
+      return { 
+        success: false, 
+        message: error.value 
+      }
     } finally {
       loading.value = false
     }
   }
   
-  const updateBookingStatus = async (bookingId, status) => {
+  const updateSevaStatus = async (sevaId, status) => {
     loading.value = true
     error.value = null
     
     try {
-      await apiClient.seva.updateBookingStatus(bookingId, status)
+      const response = await sevaService.updateBookingStatus(sevaId, status)
       
-      // Update the booking status in the list
-      const index = sevaBookings.value.findIndex(b => b.id === bookingId)
-      if (index !== -1) {
-        sevaBookings.value[index].status = status
+      if (response.success) {
+        // Update the seva status in the list
+        const index = sevas.value.findIndex(s => s.id === sevaId)
+        if (index !== -1) {
+          sevas.value[index].status = status
+        }
       }
       
-      return { success: true, message: `Booking ${status} successfully` }
+      return { 
+        success: response.success, 
+        message: response.message || `Seva ${status} successfully` 
+      }
     } catch (err) {
-      console.error('Error updating booking status:', err)
-      error.value = err.response?.data?.error || 'Failed to update booking status'
-      return { success: false, message: error.value }
+      console.error('Error updating seva status:', err)
+      error.value = err.response?.data?.error || 'Failed to update seva status'
+      return { 
+        success: false, 
+        message: error.value 
+      }
     } finally {
       loading.value = false
-    }
-  }
-  
-  // Enhanced method to add a seva to the store with proper formatting
-  const addSevaToStore = (seva) => {
-    // Ensure sevas is initialized
-    if (!sevas.value) {
-      sevas.value = []
-    }
-    
-    // Make sure the seva object has all required fields for the SevaList component
-    const enhancedSeva = {
-      ...seva,
-      // Add default values for fields that might be missing
-      devotee: seva.devotee || {
-        name: 'Dev User',
-        phone: '+91 98765 43210'
-      },
-      date: seva.date || new Date().toISOString().split('T')[0],
-      time: seva.time || '09:00 AM',
-      amount: seva.amount || seva.price || 0,
-      status: seva.status || 'pending',
-      notes: seva.notes || seva.description || '',
-      type: seva.type || 'special'
-    }
-    
-    // Add the enhanced seva to the store
-    sevas.value.push(enhancedSeva)
-    
-    return { 
-      success: true, 
-      message: 'Seva added to store successfully',
-      data: enhancedSeva
     }
   }
   
@@ -273,8 +251,7 @@ export const useSevaStore = defineStore('seva', () => {
     createSeva,
     updateSeva,
     deleteSeva,
-    updateBookingStatus,
-    addSevaToStore,
+    updateSevaStatus,
     setSearchQuery,
     setFilters,
     clearFilters,

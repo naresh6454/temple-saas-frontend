@@ -1,6 +1,7 @@
 // src/router/guards.js
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import { useDevoteeStore } from '@/stores/devotee'
 
 /**
  * Role mapping - map backend roles to frontend roles
@@ -40,6 +41,16 @@ export function requireAuth(to, from, next) {
       }
     })
     return false
+  }
+  
+  // Devotee role check for temple selection redirection
+  if (authStore.isDevotee && to.name !== 'DevoteeTempleSelection' && !to.path.includes('/temple-selection')) {
+    const entityId = to.params.id
+    // Only redirect if not accessing entity specific routes
+    if (!entityId || !to.path.includes(`/entity/${entityId}/`)) {
+      next({ name: 'DevoteeTempleSelection' })
+      return false
+    }
   }
   
   next()
@@ -131,6 +142,7 @@ export function checkRole(to, from, next, requiredRole) {
  */
 export function checkProfileCompleted(to, from, next) {
   const authStore = useAuthStore()
+  const devoteeStore = useDevoteeStore()
   const { showToast } = useToast()
   
   if (!authStore.isAuthenticated) {
@@ -146,9 +158,16 @@ export function checkProfileCompleted(to, from, next) {
   }
   
   // Check if profile is completed
-  if (!authStore.user?.profileCompleted) {
+  if (!devoteeStore.isProfileComplete && !authStore.user?.profileCompleted) {
     showToast('Please complete your profile first', 'warning')
-    next({ name: 'ProfileCreation' })
+    
+    // If entity ID exists, redirect to entity-specific profile creation
+    const entityId = to.params.id
+    if (entityId) {
+      next({ name: 'DevoteeProfileCreation', params: { id: entityId } })
+    } else {
+      next({ name: 'DevoteeTempleSelection' })
+    }
     return
   }
   
@@ -287,7 +306,7 @@ export function getDefaultRoute(role) {
   const routes = {
     tenant: '/tenant/dashboard',
     templeadmin: '/tenant/dashboard', // Add mapping for templeadmin
-    devotee: '/devotee/temple-selection',
+    devotee: '/devotee/temple-selection', // Always redirect devotees to temple selection
     volunteer: '/volunteer/temple-selection',
     superadmin: '/superadmin/dashboard',
     super_admin: '/superadmin/dashboard'

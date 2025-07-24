@@ -109,7 +109,7 @@
             </svg>
             List View
           </button>
-          <button
+          <!-- <button
             @click="currentView = 'calendar'"
             :class="[
               'px-4 py-2 text-sm font-medium rounded-md transition-all duration-200',
@@ -122,7 +122,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
             Calendar View
-          </button>
+          </button> -->
         </div>
 
         <!-- Filters -->
@@ -207,7 +207,7 @@
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVPs</th>
+                <!-- <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVPs</th> -->
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -243,9 +243,9 @@
                     {{ getEventStatus(event) }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ event.currentAttendees || 0 }} / {{ event.maxAttendees || '∞' }}
-                </td>
+                </td> -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-3">
                     <button 
@@ -254,18 +254,18 @@
                     >
                       Edit
                     </button>
-                    <button 
+                    <!-- <button 
                       @click="handleViewRSVP(event)" 
                       class="text-blue-600 hover:text-blue-900 transition-colors"
                     >
                       RSVPs
-                    </button>
-                    <button 
+                    </button> -->
+                    <!-- <button 
                       @click="handleNotifyDevotees(event)" 
                       class="text-green-600 hover:text-green-900 transition-colors"
                     >
                       Notify
-                    </button>
+                    </button> -->
                     <button 
                       @click="confirmDeleteEvent(event)" 
                       class="text-red-600 hover:text-red-900 transition-colors"
@@ -446,6 +446,7 @@ import EventForm from '@/components/event/EventForm.vue'
 const route = useRoute()
 const eventStore = useEventStore()
 const toast = useToast()
+
 
 // Get templeId from route params or provide a default
 const templeId = computed(() => route.params.templeId || route.query.templeId)

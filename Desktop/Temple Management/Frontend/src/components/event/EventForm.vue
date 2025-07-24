@@ -61,10 +61,10 @@
 
         <!-- Event Status -->
         <div v-if="isEdit">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
+          <!-- <label class="block text-sm font-medium text-gray-700 mb-2">
             Status
-          </label>
-          <select
+          </label> -->
+          <!-- <select
             v-model="form.status"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           >
@@ -72,7 +72,7 @@
             <option value="ongoing">Ongoing</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
-          </select>
+          </select> -->
         </div>
       </div>
 
@@ -216,15 +216,26 @@ onMounted(() => {
     let eventDate = '';
     let eventTime = '';
     
-    if (props.event.eventDate) {
-      const date = new Date(props.event.eventDate);
+ if (props.event.eventDate) {
+  try {
+    const date = new Date(props.event.eventDate);
+    if (!isNaN(date.getTime())) {
       eventDate = date.toISOString().split('T')[0];
       eventTime = date.toTimeString().slice(0, 5);
-    } else if (props.event.event_date) {
-      // Handle backend format
-      eventDate = props.event.event_date;
-      eventTime = props.event.event_time || '00:00';
     }
+  } catch (e) {
+    console.warn('Invalid eventDate format:', props.event.eventDate, e);
+  }
+}
+
+if (!eventDate && props.event.event_date) {
+  eventDate = props.event.event_date;
+}
+
+if (!eventTime) {
+  eventTime = props.event.event_time || '00:00';
+}
+
     
     const isActive = props.event.isActive !== undefined ? props.event.isActive : 
                      props.event.is_active !== undefined ? props.event.is_active : true;

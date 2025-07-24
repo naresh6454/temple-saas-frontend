@@ -15,12 +15,12 @@
           >
             Export Report
           </button> -->
-           <button
+           <!-- <button
             @click="showAddDonationModal = true"
             class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-all duration-200"
           >
             Add Donation
-          </button>
+          </button> -->
         </div>
       </div>
     </div>
@@ -106,6 +106,7 @@ export default {
   },
   setup() {
     const route = useRoute()
+
     const { showToast } = useToast()
 
     const loading = ref(false)

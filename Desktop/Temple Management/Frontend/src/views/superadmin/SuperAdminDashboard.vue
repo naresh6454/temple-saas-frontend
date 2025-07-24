@@ -247,7 +247,7 @@
       </div>
 
       <!-- Recent Activity -->
-      <div class="bg-white rounded-xl shadow-md border border-gray-100">
+      <!-- <div class="bg-white rounded-xl shadow-md border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900" style="font-family: 'Roboto', sans-serif;">
             Recent Activity
@@ -277,7 +277,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Modals -->

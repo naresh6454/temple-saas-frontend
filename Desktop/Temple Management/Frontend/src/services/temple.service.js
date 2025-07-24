@@ -1,29 +1,54 @@
-import { api } from './api'
+import api from '@/plugins/axios'
 
 const templeService = {
-  async getTemples() {
+  async getTemples(searchParams = {}) {
     try {
       console.log('📡 Making API call to fetch available temples')
+      console.log('🔍 Search params:', searchParams)
 
-      const response = await api.get('/api/v1/entities')
+      // DIRECT FIX: Check the current URL path directly
+      const currentPath = window.location.pathname
+      console.log('📍 Current path:', currentPath)
+      
+      let response
+      
+      // SIMPLE LOGIC: If on tenant or admin path, use entities endpoint
+      if (currentPath.includes('/tenant/') || 
+          currentPath.includes('/entity/') || 
+          currentPath.includes('/admin/') || 
+          currentPath.includes('/superadmin/')) {
+        console.log('🔒 Using admin endpoint: /v1/entities')
+        response = await api.get('/v1/entities')
+      } else {
+        // Otherwise use devotee endpoint with search params
+        console.log('🔍 Using devotee endpoint: /v1/temples/search')
+        const queryString = new URLSearchParams()
+        if (searchParams.query) queryString.append('query', searchParams.query)
+        if (searchParams.state) queryString.append('state', searchParams.state)
+        if (searchParams.type) queryString.append('type', searchParams.type)
+        
+        response = await api.get(`/v1/temples/search${queryString.toString() ? '?' + queryString.toString() : ''}`)
+      }
+      
       console.log('📥 Temple API response received:', response)
 
-      let templeData = response
-      if (!Array.isArray(response)) {
-        if (response.data && Array.isArray(response.data)) {
-          templeData = response.data
-        } else if (response.temples && Array.isArray(response.temples)) {
-          templeData = response.temples
-        } else if (response.entities && Array.isArray(response.entities)) {
-          templeData = response.entities
-        } else if (response.items && Array.isArray(response.items)) {
-          templeData = response.items
+      // Extract data from response
+      let templeData = response.data || response
+      if (!Array.isArray(templeData)) {
+        if (templeData.data && Array.isArray(templeData.data)) {
+          templeData = templeData.data
+        } else if (templeData.temples && Array.isArray(templeData.temples)) {
+          templeData = templeData.temples
+        } else if (templeData.entities && Array.isArray(templeData.entities)) {
+          templeData = templeData.entities
+        } else if (templeData.items && Array.isArray(templeData.items)) {
+          templeData = templeData.items
         }
       }
 
       if (!Array.isArray(templeData)) {
         console.error('🚨 Could not extract array from response:', response)
-        throw new Error('API returned data in unexpected format')
+        return [] // Return empty array instead of throwing error for better UI handling
       }
 
       const normalizedTemples = templeData.map(temple => this.normalizeTempleData(temple))
@@ -33,7 +58,8 @@ const templeService = {
     } catch (error) {
       console.error('❌ Error fetching temples:', error)
       console.error('Error response:', error.response?.data)
-      throw error
+      // Return empty array instead of throwing error for better UI handling
+      return []
     }
   },
 
@@ -107,10 +133,10 @@ const templeService = {
       console.log('✅ All required fields present!')
       console.log('📦 Payload being sent to API:', payload)
 
-      const response = await api.post('/api/v1/entities', payload)
+      const response = await api.post('/v1/entities', payload)
       console.log('📥 Create temple response:', response)
 
-      return response
+      return response.data || response
     } catch (error) {
       console.error('❌ Error creating temple:', error)
       console.error('Error details:', error.message || error.response?.data)
@@ -122,10 +148,10 @@ const templeService = {
     try {
       console.log(`📡 Fetching temple with ID: ${id}`)
 
-      const response = await api.get(`/api/v1/entities/${id}`)
+      const response = await api.get(`/v1/entities/${id}`)
       console.log('📥 Temple by ID response:', response)
 
-      return this.normalizeTempleData(response)
+      return this.normalizeTempleData(response.data || response)
     } catch (error) {
       console.error(`❌ Error fetching temple ID ${id}:`, error)
       console.error('Error response:', error.response?.data)
@@ -175,10 +201,10 @@ const templeService = {
         throw new Error(errorMessage)
       }
 
-      const response = await api.put(`/api/v1/entities/${id}`, payload)
+      const response = await api.put(`/v1/entities/${id}`, payload)
       console.log('📥 Update temple response:', response)
 
-      return response
+      return response.data || response
     } catch (error) {
       console.error(`❌ Error updating temple ID ${id}:`, error)
       console.error('Error details:', error.message || error.response?.data)
@@ -190,8 +216,9 @@ const templeService = {
     try {
       console.log(`📡 Deleting temple with ID: ${id}`)
 
-      await api.delete(`/api/v1/entities/${id}`)
+      const response = await api.delete(`/v1/entities/${id}`)
       console.log('✅ Temple deleted successfully')
+      return response.data || response
     } catch (error) {
       console.error(`❌ Error deleting temple ID ${id}:`, error)
       console.error('Error response:', error.response?.data)
@@ -199,16 +226,17 @@ const templeService = {
     }
   },
 
-  async joinTemple(templeId, role = 'volunteer') {
+  async joinTemple(templeId) {
     try {
-      console.log(`📡 Joining temple ID ${templeId} as ${role}`)
+      console.log(`📡 Joining temple ID ${templeId}`)
 
-      const response = await api.post('/api/v1/memberships', {
+      // Use the correct endpoint for joining temples
+      const response = await api.post('/v1/memberships', {
         entity_id: templeId
       })
 
       console.log('📥 Join temple response:', response)
-      return response
+      return response.data || response
     } catch (error) {
       console.error(`❌ Error joining temple ID ${templeId}:`, error)
       console.error('Error response:', error.response?.data)
@@ -216,51 +244,86 @@ const templeService = {
     }
   },
 
+  async getRecentTemples() {
+    try {
+      console.log('📡 Fetching recent temples')
+      
+      // Use the correct endpoint for recent temples
+      const response = await api.get('/v1/temples/recent')
+      console.log('📥 Recent temples response:', response)
+      
+      // Extract data from response
+      let templeData = response.data || response;
+      if (!Array.isArray(templeData)) {
+        if (templeData.data && Array.isArray(templeData.data)) {
+          templeData = templeData.data
+        } else if (templeData.temples && Array.isArray(templeData.temples)) {
+          templeData = templeData.temples
+        } else if (templeData.entities && Array.isArray(templeData.entities)) {
+          templeData = templeData.entities
+        } else if (templeData.items && Array.isArray(templeData.items)) {
+          templeData = templeData.items
+        }
+      }
+      
+      if (!Array.isArray(templeData)) {
+        console.error('🚨 Could not extract array from response:', response)
+        return []
+      }
+      
+      return templeData.map(temple => this.normalizeTempleData(temple))
+    } catch (error) {
+      console.error('❌ Error fetching recent temples:', error)
+      console.error('Error response:', error.response?.data)
+      return []
+    }
+  },
+
   normalizeTempleData(temple) {
     if (!temple) return null
 
     return {
-      id: temple.id || 0,
-      name: temple.name || 'Unknown Temple',
-      description: temple.description || '',
-      templeType: temple.temple_type || '',
-      category: temple.temple_type || '',
+      id: temple.id || temple.ID || 0,
+      name: temple.name || temple.Name || 'Unknown Temple',
+      description: temple.description || temple.Description || '',
+      templeType: temple.temple_type || temple.TempleType || '',
+      category: temple.temple_type || temple.TempleType || '',
 
-      addressLine1: temple.street_address || '',
-      city: temple.city || '',
-      state: temple.state || '',
-      district: temple.district || '',
-      pincode: temple.pincode || '',
+      addressLine1: temple.street_address || temple.StreetAddress || '',
+      city: temple.city || temple.City || '',
+      state: temple.state || temple.State || '',
+      district: temple.district || temple.District || '',
+      pincode: temple.pincode || temple.Pincode || '',
       country: 'India',
 
-      phone: temple.phone || '',
-      email: temple.email || '',
+      phone: temple.phone || temple.Phone || '',
+      email: temple.email || temple.Email || '',
 
-      status: temple.status || 'pending',
-      devoteeCount: temple.devotee_count || 0,
-      volunteersCount: temple.volunteers_count || 0,
+      status: temple.status || temple.Status || 'pending',
+      devoteeCount: temple.devotee_count || temple.DevoteeCount || 0,
+      volunteersCount: temple.volunteers_count || temple.VolunteersCount || 0,
 
-      image: temple.image_url || null,
+      image: temple.image_url || temple.ImageUrl || null,
 
-      mainDeity: temple.main_deity || '',
-      establishedYear: temple.established_year || null,
+      mainDeity: temple.main_deity || temple.MainDeity || '',
+      establishedYear: temple.established_year || temple.EstablishedYear || null,
 
-      createdAt: temple.created_at || null,
-      updatedAt: temple.updated_at || null,
+      createdAt: temple.created_at || temple.CreatedAt || null,
+      updatedAt: temple.updated_at || temple.UpdatedAt || null,
 
       address: {
-        street: temple.street_address || '',
-        city: temple.city || '',
-        state: temple.state || '',
-        district: temple.district || '',
-        pincode: temple.pincode || '',
+        street: temple.street_address || temple.StreetAddress || '',
+        city: temple.city || temple.City || '',
+        state: temple.state || temple.State || '',
+        district: temple.district || temple.District || '',
+        pincode: temple.pincode || temple.Pincode || '',
         country: 'India'
       },
 
       contact: {
-        phone: temple.phone || '',
-        email: temple.email || '',
-        website: temple.website || ''
+        phone: temple.phone || temple.Phone || '',
+        email: temple.email || temple.Email || '',
+        website: temple.website || temple.Website || ''
       }
     }
   },
@@ -269,17 +332,48 @@ const templeService = {
     try {
       console.log(`📡 Searching temples with query: ${query}`)
 
-      const response = await api.get(`/api/v1/entities?search=${encodeURIComponent(query)}`)
+      // Check the current URL path directly
+      const currentPath = window.location.pathname
+      
+      let response
+      
+      // If on tenant or admin path, use entities endpoint
+      if (currentPath.includes('/tenant/') || 
+          currentPath.includes('/entity/') || 
+          currentPath.includes('/admin/') || 
+          currentPath.includes('/superadmin/')) {
+        console.log('🔒 Using admin search endpoint: /v1/entities')
+        response = await api.get(`/v1/entities?search=${encodeURIComponent(query)}`)
+      } else {
+        // Otherwise use devotee endpoint
+        console.log('🔍 Using devotee search endpoint: /v1/temples/search')
+        response = await api.get(`/v1/temples/search?query=${encodeURIComponent(query)}`)
+      }
 
-      const normalizedTemples = Array.isArray(response)
-        ? response.map(temple => this.normalizeTempleData(temple))
-        : []
+      // Extract data from response
+      let templeData = response.data || response;
+      if (!Array.isArray(templeData)) {
+        if (templeData.data && Array.isArray(templeData.data)) {
+          templeData = templeData.data
+        } else if (templeData.temples && Array.isArray(templeData.temples)) {
+          templeData = templeData.temples
+        } else if (templeData.entities && Array.isArray(templeData.entities)) {
+          templeData = templeData.entities
+        } else if (templeData.items && Array.isArray(templeData.items)) {
+          templeData = templeData.items
+        }
+      }
 
-      return normalizedTemples
+      if (!Array.isArray(templeData)) {
+        console.error('🚨 Could not extract array from response:', response)
+        return []
+      }
+
+      return templeData.map(temple => this.normalizeTempleData(temple))
     } catch (error) {
       console.error('❌ Error searching temples:', error)
       console.error('Error response:', error.response?.data)
-      throw error
+      return []
     }
   }
 }

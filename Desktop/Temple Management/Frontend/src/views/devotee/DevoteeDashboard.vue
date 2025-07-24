@@ -547,6 +547,7 @@ const loadDashboardData = async () => {
   try {
     // Set the entity ID for API calls
     localStorage.setItem('current_entity_id', entityId)
+    localStorage.setItem('current_tenant_id', entityId) // ✅ Enables proper X-Tenant-ID header in axios
 
     // Make parallel API requests
     const promises = []
@@ -575,14 +576,24 @@ const loadDashboardData = async () => {
     // Load upcoming events
     promises.push(fetchUpcomingEvents(entityId)
       .then(data => {
-        upcomingEvents.value = data.slice(0, 3) // Only show 3 events
+        if (Array.isArray(data)) {
+          upcomingEvents.value = data.slice(0, 3)
+        } else {
+          console.warn('Expected array but got:', data)
+          upcomingEvents.value = []
+        }
       })
     )
 
     // Load seva bookings
     promises.push(fetchMySevaBookings()
       .then(data => {
-        mySevaBookings.value = data.slice(0, 3) // Only show 3 bookings
+        if (Array.isArray(data)) {
+          mySevaBookings.value = data.slice(0, 3)
+        } else {
+          console.warn('Expected array but got:', data)
+          mySevaBookings.value = []
+        }
       })
     )
 
