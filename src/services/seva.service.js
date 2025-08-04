@@ -3,29 +3,76 @@ import api from '@/plugins/axios'
 
 class SevaService {
   /**
-   * Get all sevas for a specific entity (temple)
-   * @param {string} entityId - Temple ID
-   * @param {Object} params - Query parameters
+   * Get all sevas for the current entity (temple)
+   * @param {Object} params - Query parameters for filtering (seva_type, search, page, limit)
    * @returns {Promise<Object>} Seva list with pagination
    */
-  async getSevas(entityId, params = {}) {
+  async getSevas(params = {}) {
+  try {
+    console.log('Requesting sevas with params:', params)
+    
+    const response = await api.get('/v1/sevas', { params })
+    
+    console.log('Seva response:', response.data)
+    
+    return {
+      success: true,
+      data: response.data?.sevas || [],
+      pagination: response.data?.pagination || {}
+    }
+  } catch (error) {
+    console.error('Error fetching sevas:', error)
+    console.error('Error details:', error.response?.data || 'No response data')
+    
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch sevas',
+      data: []
+    }
+  }
+}
+
+  /**
+   * Book a seva
+   * @param {Object} bookingData - Booking details
+   * @returns {Promise<Object>} Booking response
+   */
+  async bookSeva(bookingData) {
     try {
-      // Remove redundant /api prefix, as it's already in the baseURL
-      const response = await api.get('/v1/sevas', { 
-        params: { ...params, entity_id: entityId } 
-      })
+      const response = await api.post('/v1/sevas/bookings', bookingData)
       
       return {
         success: true,
-        data: response.data || [],
-        pagination: response.data.pagination || {},
-        total: response.data.total || 0
+        data: response.data,
+        message: 'Seva booked successfully'
       }
     } catch (error) {
-      console.error('Error fetching sevas:', error)
+      console.error('Error booking seva:', error)
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to fetch sevas',
+        error: error.response?.data?.error || 'Failed to book seva',
+        data: null
+      }
+    }
+  }
+
+  /**
+   * Get user's seva bookings
+   * @returns {Promise<Object>} User's booking history
+   */
+  async getMyBookings() {
+    try {
+      const response = await api.get('/v1/sevas/my-bookings')
+      
+      return {
+        success: true,
+        data: response.data?.bookings || []
+      }
+    } catch (error) {
+      console.error('Error fetching my bookings:', error)
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to fetch booking history',
         data: []
       }
     }
@@ -33,15 +80,12 @@ class SevaService {
 
   /**
    * Get seva by ID
-   * @param {string} entityId - Temple ID
    * @param {string} sevaId - Seva ID
    * @returns {Promise<Object>} Seva details
    */
-  async getSevaById(entityId, sevaId) {
+  async getSevaById(sevaId) {
     try {
-      const response = await api.get(`/v1/sevas/${sevaId}`, {
-        params: { entity_id: entityId }
-      })
+      const response = await api.get(`/v1/sevas/${sevaId}`)
       return {
         success: true,
         data: response.data || null
@@ -56,11 +100,7 @@ class SevaService {
     }
   }
 
-  /**
-   * Create new seva
-   * @param {Object} sevaData - Seva information with entity_id included
-   * @returns {Promise<Object>} Created seva
-   */
+  // Rest of the methods remain unchanged
   async createSeva(sevaData) {
     try {
       console.log('Creating seva with data:', sevaData)
@@ -81,12 +121,6 @@ class SevaService {
     }
   }
 
-  /**
-   * Update seva
-   * @param {string} sevaId - Seva ID
-   * @param {Object} sevaData - Updated seva information
-   * @returns {Promise<Object>} Updated seva
-   */
   async updateSeva(sevaId, sevaData) {
     try {
       console.log('Updating seva with ID:', sevaId, 'Data:', sevaData)
@@ -107,11 +141,6 @@ class SevaService {
     }
   }
 
-  /**
-   * Delete seva
-   * @param {string} sevaId - Seva ID
-   * @returns {Promise<Object>} Success status
-   */
   async deleteSeva(sevaId) {
     try {
       await api.delete(`/v1/sevas/${sevaId}`)
@@ -129,10 +158,6 @@ class SevaService {
     }
   }
 
-  /**
-   * Get seva bookings for entity (temple)
-   * @returns {Promise<Object>} Entity seva bookings
-   */
   async getEntityBookings() {
     try {
       const response = await api.get('/v1/sevas/entity-bookings')
@@ -153,12 +178,6 @@ class SevaService {
     }
   }
 
-  /**
-   * Update booking status (approve/reject)
-   * @param {string} bookingId - Booking ID
-   * @param {string} status - New status (approved/rejected)
-   * @returns {Promise<Object>} Updated booking
-   */
   async updateBookingStatus(bookingId, status) {
     try {
       const response = await api.patch(`/v1/sevas/bookings/${bookingId}/status`, { 

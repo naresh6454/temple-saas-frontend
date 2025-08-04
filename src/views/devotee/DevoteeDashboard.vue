@@ -21,8 +21,8 @@
             <h3 class="text-sm font-medium text-amber-800">Complete Your Profile</h3>
             <p class="text-sm text-amber-700 mt-1">
               Your profile is {{ profileCompletionPercentage }}% complete. 
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/profile/edit`" 
+                <router-link 
+                :to="`/entity/${route.params.id}/devotee/profile/create`" 
                 class="font-medium text-amber-800 hover:text-amber-900 underline"
               >
                 Complete now
@@ -64,36 +64,30 @@
 
     <!-- Dashboard Content -->
     <div v-else>
-      <!-- Dashboard Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <DashboardWidget 
-          title="Profile Completion"
-          :value="`${profileCompletionPercentage}%`"
-          icon="user-circle"
-          :color="profileCompletionPercentage === 100 ? 'green' : 'amber'"
-        />
-        <DashboardWidget 
-          title="Seva Bookings"
-          :value="stats.totalSevaBookings || mySevaBookings.length || 0"
-          icon="calendar"
-          color="indigo"
-          :subtitle="`${stats.upcomingSevas || mySevaBookings.length || 0} upcoming`"
-        />
-        <DashboardWidget 
-          title="Total Events"
-          :value="activityStats.totalEvents || stats.eventsAttended || 0"
-          icon="calendar-days"
-          color="emerald"
-          :subtitle="`${activityStats.upcomingEvents || stats.upcomingEvents || 0} upcoming`"
-        />
-        <DashboardWidget 
-          title="Temple Profile"
-          :value="currentTemple ? 'Active' : 'Select Temple'"
-          icon="building-library"
-          color="rose"
-          :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
-        />
-      </div>
+  <!-- Dashboard Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-8">
+    <DashboardWidget 
+      title="Seva Bookings"
+      :value="stats.totalSevaBookings || mySevaBookings.length || 0"
+      icon="calendar"
+      color="indigo"
+      :subtitle="`${stats.upcomingSevas || mySevaBookings.length || 0} upcoming`"
+    />
+    <DashboardWidget 
+      title="Total Events"
+      :value="activityStats.totalEvents || stats.eventsAttended || 0"
+      icon="calendar-days"
+      color="emerald"
+      :subtitle="`${activityStats.upcomingEvents || stats.upcomingEvents || 0} upcoming`"
+    />
+    <DashboardWidget 
+      title="Temple Profile"
+      :value="currentTemple ? 'Active' : 'Select Temple'"
+      icon="building-library"
+      color="rose"
+      :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
+    />
+  </div>
 
       <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -396,7 +390,7 @@
               </router-link>
               
               <router-link 
-                :to="`/entity/${route.params.id}/devotee/profile/edit`"
+                :to="`/entity/${route.params.id}/devotee/profile/create`"
                 class="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

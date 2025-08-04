@@ -238,33 +238,7 @@
 
       <!-- Action Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
-        <!-- <button
-          type="button"
-          @click="$emit('previous')"
-          class="flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors duration-200"
-        >
-          <ChevronLeftIcon class="w-5 h-5 mr-2" />
-          Previous Step
-        </button> -->
-        
-        <!-- <div class="flex gap-4 flex-1">
-          <button
-            type="button"
-            @click="handleSkip"
-            class="flex-1 px-6 py-3 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-50 transition-colors duration-200"
-          >
-            Skip for Now
-          </button>
-          
-          <button
-            type="submit"
-            :disabled="isSubmitting"
-            class="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            <BaseLoader v-if="isSubmitting" size="sm" color="white" class="mr-2" />
-            Continue
-          </button>
-        </div> -->
+        <!-- Action buttons are commented out in the original code -->
       </div>
     </form>
   </div>
@@ -272,6 +246,8 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { watch } from 'vue';
+
 import { 
   ChevronLeftIcon,
   HeartIcon,
@@ -286,7 +262,8 @@ import BaseInput from '../common/BaseInput.vue'
 import BaseSelect from '../common/BaseSelect.vue'
 import BaseLoader from '../common/BaseLoader.vue'
 
-const emit = defineEmits(['next', 'previous', 'skip'])
+// Updated to include 'update' event
+const emit = defineEmits(['next', 'previous', 'skip', 'update'])
 
 const isSubmitting = ref(false)
 const hasSpouse = ref(false)
@@ -346,19 +323,22 @@ const removeEmergencyContact = (index) => {
   formData.emergencyContacts.splice(index, 1)
 }
 
+// FIXED: Updated handleSubmit to emit both update and next events with frontend format data
 const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const submitData = {
+    // Create the data object with hasSpouse flag
+    const familyData = {
       ...formData,
       hasSpouse: hasSpouse.value
     }
     
-    emit('next', submitData)
+    // Emit update with the frontend format data
+    emit('update', familyData)
+    
+    // Also emit next to proceed to the next step
+    emit('next')
   } catch (error) {
     console.error('Error saving family details:', error)
   } finally {
@@ -369,4 +349,14 @@ const handleSubmit = async () => {
 const handleSkip = () => {
   emit('skip')
 }
+
+// Add watch handler
+watch(formData, () => {
+  // Update parent component with data changes
+  const familyData = {
+    ...formData,
+    hasSpouse: hasSpouse.value
+  }
+  emit('update', familyData)
+}, { deep: true })
 </script>

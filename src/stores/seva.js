@@ -50,24 +50,34 @@ export const useSevaStore = defineStore('seva', () => {
   }))
   
   // Actions - Connect to backend API
-  const fetchSevas = async (entityId) => {
-    loading.value = true
-    error.value = null
+  const fetchSevas = async (params = {}) => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    // Only pass filtering parameters
+    const response = await sevaService.getSevas({
+      page: params.page || 1,
+      limit: params.limit || 10,
+      seva_type: params.seva_type || '',
+      search: params.search || ''
+    })
     
-    try {
-      console.log('Fetching sevas for entity ID:', entityId)
-      // Call API using the updated service
-      const response = await sevaService.getSevas(entityId)
+    if (response.success) {
       sevas.value = response.data || []
       return sevas.value
-    } catch (err) {
-      console.error('Error fetching sevas:', err)
-      error.value = err.response?.data?.error || 'Failed to fetch sevas'
+    } else {
+      error.value = response.error
       return []
-    } finally {
-      loading.value = false
     }
+  } catch (err) {
+    console.error('Error fetching sevas:', err)
+    error.value = err.message || 'Failed to fetch sevas'
+    return []
+  } finally {
+    loading.value = false
   }
+}
   
   const fetchEntityBookings = async () => {
     loading.value = true
