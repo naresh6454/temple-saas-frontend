@@ -21,17 +21,20 @@
             <h1 class="text-2xl font-bold text-gray-900">Temple Register Report</h1>
             <p class="text-gray-600 mt-1">
               Download registration data for your temples
-              <span v-if="fromSuperadmin && tenantIds.length > 1" class="text-indigo-600 font-medium">
-                (Multiple Tenants Selected)
+              <span v-if="fromSuperadmin && safeTenantIds.length > 1" class="text-indigo-600 font-medium">
+                (Multiple Tenants Selected: {{ safeTenantIds.length }})
               </span>
-              <span v-else-if="tenantId" class="text-indigo-600 font-medium">
-                (Tenant ID: {{ tenantId }})
+              <span v-else-if="fromSuperadmin && safeTenantIds.length === 1" class="text-indigo-600 font-medium">
+                (Tenant ID: {{ safeTenantIds[0] }})
+              </span>
+              <span v-else-if="safeTenantId" class="text-indigo-600 font-medium">
+                (Tenant ID: {{ safeTenantId }})
               </span>
             </p>
           </div>
           <div class="flex items-center space-x-4">
             <div class="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
-              <span class="text-indigo-800 font-medium">{{ userStore.user?.name || 'Tenant User' }}</span>
+              <span class="text-indigo-800 font-medium">{{ safeUserName }}</span>
               <span class="text-indigo-600 text-sm ml-2">{{ fromSuperadmin ? '(Super Admin)' : '(Tenant)' }}</span>
             </div>
           </div>
@@ -41,6 +44,31 @@
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Error Display -->
+      <div v-if="safeError" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Error</h3>
+            <div class="mt-2 text-sm text-red-700">
+              {{ safeError }}
+            </div>
+            <div class="mt-4">
+              <button 
+                @click="clearError"
+                class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Filter & Download Card -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
         <div class="p-6 border-b border-gray-200">
@@ -55,11 +83,11 @@
             <div class="relative">
               <select 
                 v-model="selectedTemple" 
-                @change="onTempleChange"
-                class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                :disabled="isLoading"
+                class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="all">All Temples</option>
-                <option v-for="temple in templeStore.temples" :key="temple.id" :value="temple.id">
+                <option v-for="temple in safeTemples" :key="temple.id" :value="temple.id">
                   {{ temple.name }}
                 </option>
               </select>
@@ -76,7 +104,7 @@
                   v-for="filter in timeFilters" 
                   :key="filter.value"
                   @click="setActiveFilter(filter.value)"
-                  :disabled="isDownloading"
+                  :disabled="isLoading"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   :class="activeFilter === filter.value ? 
                     'bg-indigo-600 text-white' : 
@@ -95,7 +123,7 @@
                   v-for="status in statusFilters" 
                   :key="status.value"
                   @click="setActiveStatus(status.value)"
-                  :disabled="isDownloading"
+                  :disabled="isLoading"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   :class="activeStatus === status.value ? 
                     'bg-indigo-600 text-white' : 
@@ -115,9 +143,8 @@
                 <input 
                   type="date" 
                   v-model="startDate"
-                  :disabled="isDownloading"
-                  :max="endDate"
-                  class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isLoading"
+                  class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -125,10 +152,8 @@
                 <input 
                   type="date" 
                   v-model="endDate"
-                  :disabled="isDownloading"
-                  :min="startDate"
-                  :max="today"
-                  class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isLoading"
+                  class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -146,8 +171,8 @@
                 <div class="relative">
                   <select 
                     v-model="selectedFormat" 
-                    :disabled="isDownloading"
-                    class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="isLoading"
+                    class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option v-for="format in formats" :key="format.value" :value="format.value">
                       {{ format.label }}
@@ -158,33 +183,18 @@
                 <!-- Download Button -->
                 <button 
                   @click="downloadReport"
-                  :disabled="isDownloading || !isFormValid"
-                  class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  :disabled="isLoading"
+                  class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg v-if="isDownloading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg v-if="isDownloadLoading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <svg v-else class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  {{ isDownloading ? 'Downloading...' : 'Download' }}
+                  {{ isDownloadLoading ? 'Downloading...' : 'Download' }}
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Error Display -->
-          <div v-if="errorMessage" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-red-800">Error</h3>
-                <p class="mt-1 text-sm text-red-700">{{ errorMessage }}</p>
               </div>
             </div>
           </div>
@@ -197,10 +207,20 @@
           <h3 class="text-lg font-medium text-gray-900 mb-4">Applied Filters</h3>
           
           <div class="flex flex-wrap gap-2">
-            <!-- Tenant Filter (only in superadmin view with multiple tenants) -->
-            <div v-if="fromSuperadmin && tenantIds.length > 1" class="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-800">
-              <span class="font-medium mr-1">Tenants:</span>
-              {{ tenantIds.length }} selected
+            <!-- Tenant Filter -->
+            <div class="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-purple-100 text-purple-800">
+              <span class="font-medium mr-1">
+                {{ fromSuperadmin ? 'Tenant(s):' : 'Tenant:' }}
+              </span>
+              <span v-if="fromSuperadmin && safeTenantIds.length > 1">
+                {{ safeTenantIds.length }} selected
+              </span>
+              <span v-else-if="fromSuperadmin && safeTenantIds.length === 1">
+                {{ safeTenantIds[0] }}
+              </span>
+              <span v-else>
+                {{ safeTenantId }}
+              </span>
             </div>
             
             <!-- Temple Filter -->
@@ -213,7 +233,7 @@
             <div class="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-indigo-100 text-indigo-800">
               <span class="font-medium mr-1">Period:</span>
               {{ getTimeFilterLabel(activeFilter) }}
-              <span v-if="activeFilter === 'custom' && startDate && endDate">
+              <span v-if="activeFilter === 'custom'">
                 ({{ formatDate(startDate) }} - {{ formatDate(endDate) }})
               </span>
             </div>
@@ -236,265 +256,692 @@
           </p>
         </div>
       </div>
+
+      <!-- Loading State -->
+      <div v-if="isGeneralLoading" class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-center">
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="text-gray-600">Loading report data...</span>
+        </div>
+      </div>
+
+      <!-- Report Preview (if available) -->
+      <div v-if="hasValidReportData" class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900">Report Preview</h3>
+          <p class="text-sm text-gray-600 mt-1">
+            Showing {{ safeReportPreview.totalRecords || reportPreviewData.length }} records
+          </p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th v-for="column in reportPreviewColumns" :key="column.key" 
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {{ column.label }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="(row, index) in reportPreviewData.slice(0, 10)" :key="index">
+                <td v-for="column in reportPreviewColumns" :key="column.key" 
+                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ row?.[column.key] || '-' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="reportPreviewData.length > 10" class="p-4 border-t border-gray-200 text-center text-sm text-gray-600">
+          Showing first 10 records. Download the full report to see all {{ safeReportPreview.totalRecords || reportPreviewData.length }} records.
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue';
+<script>
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useTempleStore } from '@/stores/temple';
 import { useAuthStore } from '@/stores/auth';
+import { useReportsStore } from '@/stores/reports';
 import { useToast } from '@/composables/useToast';
-import ReportsService from '@/services/reports.service';
 
-// Composables
-const route = useRoute();
-const router = useRouter();
-const templeStore = useTempleStore();
-const userStore = useAuthStore();
-const { showToast } = useToast();
+export default {
+  name: 'TempleRegisterReport',
+  setup() {
+    // Composables
+    const route = useRoute();
+    const router = useRouter();
+    const templeStore = useTempleStore();
+    const userStore = useAuthStore();
+    const reportsStore = useReportsStore();
+    const { showToast } = useToast();
 
-// Reactive state
-const selectedTemple = ref('all');
-const activeFilter = ref('weekly');
-const activeStatus = ref('all');
-const selectedFormat = ref('pdf');
-const startDate = ref('');
-const endDate = ref('');
-const isDownloading = ref(false);
-const errorMessage = ref('');
+    // Reactive state
+    const selectedTemple = ref('all');
+    const activeFilter = ref('weekly');
+    const activeStatus = ref('all');
+    const selectedFormat = ref('pdf');
+    const startDate = ref(new Date().toISOString().split('T')[0]);
+    const endDate = ref(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
 
-// Initialize dates
-const initializeDates = () => {
-  const today = new Date();
-  const weekAgo = new Date();
-  weekAgo.setDate(today.getDate() - 7);
-  
-  endDate.value = today.toISOString().split('T')[0];
-  startDate.value = weekAgo.toISOString().split('T')[0];
-};
+    // Filter options
+    const timeFilters = [
+      { label: 'Weekly', value: 'weekly' },
+      { label: 'Monthly', value: 'monthly' },
+      { label: 'Yearly', value: 'yearly' },
+      { label: 'Custom Range', value: 'custom' },
+    ];
 
-// Filter options
-const timeFilters = [
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
-  { label: 'Yearly', value: 'yearly' },
-  { label: 'Custom Range', value: 'custom' },
-];
+    const statusFilters = [
+      { label: 'All Status', value: 'all' },
+      { label: 'Approved', value: 'approved' },
+      { label: 'Pending', value: 'pending' },
+      { label: 'Rejected', value: 'rejected' },
+    ];
 
-const statusFilters = [
-  { label: 'All Status', value: 'all' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Rejected', value: 'rejected' },
-];
+    const formats = [
+      { label: 'PDF', value: 'pdf' },
+      { label: 'CSV', value: 'csv' },
+      { label: 'Excel', value: 'excel' },
+    ];
 
-const formats = [
-  { label: 'PDF', value: 'pdf' },
-  { label: 'CSV', value: 'csv' },
-  { label: 'Excel', value: 'excel' },
-];
-
-// Computed properties
-const tenantId = computed(() => {
-  return route.params.tenantId || userStore.user?.id || localStorage.getItem('current_tenant_id');
-});
-
-// Check for tenants parameter from superadmin
-const fromSuperadmin = computed(() => route.query.from === 'superadmin');
-const tenantIds = computed(() => {
-  if (route.query.tenants) {
-    return route.query.tenants.split(',');
-  }
-  return [tenantId.value]; // Default to current tenant only
-});
-
-const today = computed(() => {
-  return new Date().toISOString().split('T')[0];
-});
-
-const entityId = computed(() => {
-  return selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-});
-
-const isFormValid = computed(() => {
-  if (activeFilter.value === 'custom') {
-    return startDate.value && endDate.value && new Date(startDate.value) <= new Date(endDate.value);
-  }
-  return true;
-});
-
-// Methods
-const setActiveFilter = (filter) => {
-  activeFilter.value = filter;
-  clearError();
-  
-  // Set appropriate date range based on filter
-  const today = new Date();
-  const start = new Date();
-  
-  if (filter === 'weekly') {
-    start.setDate(today.getDate() - 7);
-  } else if (filter === 'monthly') {
-    start.setDate(today.getDate() - 30);
-  } else if (filter === 'yearly') {
-    start.setDate(today.getDate() - 365);
-  }
-  
-  if (filter !== 'custom') {
-    startDate.value = start.toISOString().split('T')[0];
-    endDate.value = today.toISOString().split('T')[0];
-  }
-};
-
-const setActiveStatus = (status) => {
-  activeStatus.value = status;
-  clearError();
-};
-
-const onTempleChange = () => {
-  clearError();
-};
-
-const clearError = () => {
-  errorMessage.value = '';
-};
-
-const getTempleName = (templeId) => {
-  if (templeId === 'all') return 'All Temples';
-  const temple = templeStore.temples.find(t => t.id.toString() === templeId.toString());
-  return temple ? temple.name : 'Unknown Temple';
-};
-
-const getTimeFilterLabel = (filter) => {
-  const found = timeFilters.find(f => f.value === filter);
-  return found ? found.label : 'Unknown';
-};
-
-const getStatusFilterLabel = (status) => {
-  const found = statusFilters.find(s => s.value === status);
-  return found ? found.label : 'Unknown';
-};
-
-const getFormatLabel = (format) => {
-  const found = formats.find(f => f.value === format);
-  return found ? found.label : 'Unknown';
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
-
-const buildReportParams = () => {
-  // Use entityIds if coming from superadmin with multiple tenants
-  if (fromSuperadmin.value && tenantIds.value.length > 1) {
-    const params = {
-      entityIds: tenantIds.value,
-      dateRange: activeFilter.value,
-      format: selectedFormat.value
-    };
-
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
-    if (activeFilter.value === 'custom') {
-      params.startDate = startDate.value;
-      params.endDate = endDate.value;
-    }
-
-    return params;
-  } else {
-    // Original logic for single tenant
-    const params = {
-      entityId: entityId.value,
-      dateRange: activeFilter.value,
-      format: selectedFormat.value
-    };
-
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
-    if (activeFilter.value === 'custom') {
-      params.startDate = startDate.value;
-      params.endDate = endDate.value;
-    }
-
-    return params;
-  }
-};
-
-const downloadReport = async () => {
-  if (isDownloading.value || !isFormValid.value) return;
-
-  clearError();
-  isDownloading.value = true;
-
-  try {
-    const params = buildReportParams();
-    
-    // Validate parameters using the service validation
-    const validation = ReportsService.validateReportParams({
-      ...params,
-      type: 'temple-registered'
+    // Enhanced safe computed properties with comprehensive null safety
+    const safeTenantId = computed(() => {
+      try {
+        return route?.params?.tenantId || 
+              route?.query?.tenantId ||
+              userStore?.user?.tenantId || 
+              userStore?.user?.id || 
+              (typeof localStorage !== 'undefined' ? localStorage.getItem('current_tenant_id') : null) || 
+              '';
+      } catch (error) {
+        console.error('Error getting safe tenant ID:', error);
+        return '';
+      }
     });
 
-    if (!validation.isValid) {
-      throw new Error(validation.errors.join(', '));
-    }
+    const fromSuperadmin = computed(() => {
+      try {
+        return route?.query?.from === 'superadmin';
+      } catch (error) {
+        console.error('Error checking superadmin flag:', error);
+        return false;
+      }
+    });
 
-    // Console logging (matching your existing format)
-    console.log('Downloading report with the following parameters:');
-    console.log('- Temple:', selectedTemple.value === 'all' ? 'All Temples' : getTempleName(selectedTemple.value));
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      console.log('- Tenants:', tenantIds.value.length, 'selected');
-    }
-    console.log('- Time filter:', getTimeFilterLabel(activeFilter.value));
-    console.log('- Date range:', formatDate(startDate.value), 'to', formatDate(endDate.value));
-    console.log('- Status:', getStatusFilterLabel(activeStatus.value));
-    console.log('- Format:', getFormatLabel(selectedFormat.value));
+    const safeTenantIds = computed(() => {
+      try {
+        if (fromSuperadmin.value && route?.query?.tenants) {
+          const tenants = route.query.tenants.split(',').filter(id => id && id.trim());
+          return tenants.length > 0 ? tenants : [];
+        } else if (fromSuperadmin.value && route?.query?.tenantId) {
+          return [route.query.tenantId];
+        } else if (fromSuperadmin.value && route?.params?.tenantId) {
+          return [route.params.tenantId];
+        } else {
+          const currentTenantId = safeTenantId.value;
+          return currentTenantId ? [currentTenantId] : [];
+        }
+      } catch (error) {
+        console.error('Error getting safe tenant IDs:', error);
+        return [];
+      }
+    });
 
-    // Call the service method
-    const result = await ReportsService.downloadTempleRegisteredReport(params);
-    
-    // Show success message
-    showToast(`Report downloaded successfully: ${result.filename}`, 'success');
-    
-  } catch (error) {
-    console.error('Download failed:', error);
-    errorMessage.value = error.message || 'Failed to download report. Please try again.';
-    showToast(`Download failed: ${error.message}`, 'error');
-  } finally {
-    isDownloading.value = false;
+    const safeUserName = computed(() => {
+      try {
+        return userStore?.user?.name || userStore?.user?.username || 'Tenant User';
+      } catch (error) {
+        console.error('Error getting safe user name:', error);
+        return 'User';
+      }
+    });
+
+    const safeError = computed(() => {
+      try {
+        return reportsStore?.error || null;
+      } catch (error) {
+        console.error('Error getting safe error:', error);
+        return null;
+      }
+    });
+
+    // Updated safeTemples computed property with more robust logic
+    const safeTemples = computed(() => {
+      try {
+        // Check if templeStore exists and has temples
+        if (!templeStore) {
+          console.error('Temple store is not available');
+          return [];
+        }
+        
+        console.log('🔍 Temple store temples:', templeStore.temples ? `${templeStore.temples.length} temples` : 'undefined temples');
+        
+        if (!templeStore.temples || !Array.isArray(templeStore.temples)) {
+          console.warn('⚠️ Temple store has no temples array');
+          return [];
+        }
+        
+        return templeStore.temples;
+      } catch (error) {
+        console.error('Error getting safe temples:', error);
+        return [];
+      }
+    });
+
+    const isGeneralLoading = computed(() => {
+      try {
+        return reportsStore?.loading || false;
+      } catch (error) {
+        console.error('Error getting loading state:', error);
+        return false;
+      }
+    });
+
+    const isDownloadLoading = computed(() => {
+      try {
+        return reportsStore?.downloadLoading || false;
+      } catch (error) {
+        console.error('Error getting download loading state:', error);
+        return false;
+      }
+    });
+
+    const isLoading = computed(() => {
+      return isGeneralLoading.value || isDownloadLoading.value;
+    });
+
+    const safeReportPreview = computed(() => {
+      try {
+        return reportsStore?.reportPreview || {};
+      } catch (error) {
+        console.error('Error getting safe report preview:', error);
+        return {};
+      }
+    });
+
+    const hasValidReportData = computed(() => {
+      try {
+        const preview = safeReportPreview.value;
+        return preview &&
+              preview.data &&
+              Array.isArray(preview.data) &&
+              preview.data.length > 0;
+      } catch (error) {
+        console.error('Error checking valid report data:', error);
+        return false;
+      }
+    });
+
+    const reportPreviewColumns = computed(() => {
+      try {
+        return safeReportPreview.value?.columns || [];
+      } catch (error) {
+        console.error('Error getting report preview columns:', error);
+        return [];
+      }
+    });
+
+    const reportPreviewData = computed(() => {
+      try {
+        return safeReportPreview.value?.data || [];
+      } catch (error) {
+        console.error('Error getting report preview data:', error);
+        return [];
+      }
+    });
+
+    // Methods
+    const clearError = () => {
+      try {
+        if (reportsStore && typeof reportsStore.clearError === 'function') {
+          reportsStore.clearError();
+        }
+      } catch (error) {
+        console.error('Error clearing error:', error);
+      }
+    };
+
+    const setActiveFilter = (filter) => {
+      try {
+        activeFilter.value = filter;
+        clearError();
+        
+        const today = new Date();
+
+        if (filter === 'weekly') {
+          startDate.value = new Date().toISOString().split('T')[0];
+          const weekEnd = new Date();
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          endDate.value = weekEnd.toISOString().split('T')[0];
+        } else if (filter === 'monthly') {
+          startDate.value = new Date().toISOString().split('T')[0];
+          const monthEnd = new Date();
+          monthEnd.setDate(monthEnd.getDate() + 30);
+          endDate.value = monthEnd.toISOString().split('T')[0];
+        } else if (filter === 'yearly') {
+          const currentYear = today.getFullYear();
+          startDate.value = new Date(currentYear, 0, 1).toISOString().split('T')[0];
+          endDate.value = new Date(currentYear, 11, 31).toISOString().split('T')[0];
+        }
+        // For custom, leave dates as is
+
+        fetchPreview();
+      } catch (error) {
+        console.error('Error setting active filter:', error);
+        showToast('Failed to set filter. Please try again.', 'error');
+      }
+    };
+
+    const setActiveStatus = (status) => {
+      try {
+        activeStatus.value = status;
+        clearError();
+        fetchPreview();
+      } catch (error) {
+        console.error('Error setting active status:', error);
+        showToast('Failed to set status. Please try again.', 'error');
+      }
+    };
+
+    // Helper methods for display
+    const getTempleName = (templeId) => {
+      try {
+        if (templeId === 'all') return 'All Temples';
+        
+        const temple = safeTemples.value.find(t => t?.id?.toString() === templeId?.toString());
+        return temple?.name || 'Unknown Temple';
+      } catch (error) {
+        console.error('Error getting temple name:', error);
+        return 'Unknown Temple';
+      }
+    };
+
+    const getTimeFilterLabel = (filter) => {
+      try {
+        const found = timeFilters.find(f => f.value === filter);
+        return found ? found.label : 'Unknown';
+      } catch (error) {
+        console.error('Error getting time filter label:', error);
+        return 'Unknown';
+      }
+    };
+
+    const getStatusFilterLabel = (status) => {
+      try {
+        const found = statusFilters.find(s => s.value === status);
+        return found ? found.label : 'Unknown';
+      } catch (error) {
+        console.error('Error getting status filter label:', error);
+        return 'Unknown';
+      }
+    };
+
+    const getFormatLabel = (format) => {
+      try {
+        const found = formats.find(f => f.value === format);
+        return found ? found.label : 'Unknown';
+      } catch (error) {
+        console.error('Error getting format label:', error);
+        return 'Unknown';
+      }
+    };
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return dateString || '';
+      }
+    };
+
+    // Report params and API calls
+    const buildReportParams = () => {
+      try {
+        const params = {
+          dateRange: activeFilter.value || 'weekly',
+          startDate: startDate.value,
+          endDate: endDate.value,
+          format: selectedFormat.value || 'pdf'
+        };
+
+        // Add status filter if not 'all'
+        if (activeStatus.value !== 'all') {
+          params.status = activeStatus.value;
+        }
+
+        // Handle entity IDs with safe string conversion
+        if (fromSuperadmin.value) {
+          if (safeTenantIds.value && safeTenantIds.value.length > 1) {
+            // Multiple tenants case - use entityIds as array
+            params.entityIds = safeTenantIds.value.filter(id => id && String(id).trim());
+            params.isSuperAdmin = true;
+            if (params.entityIds.length === 0) {
+              throw new Error('No valid tenants selected for report generation');
+            }
+          } else if (safeTenantIds.value && safeTenantIds.value.length === 1) {
+            // Single tenant case
+            params.entityId = safeTenantIds.value[0];
+            params.isSuperAdmin = true;
+            if (!params.entityId || !String(params.entityId).trim()) {
+              throw new Error('Invalid tenant ID for report generation');
+            }
+          } else {
+            throw new Error('No tenants selected for report generation');
+          }
+        } else {
+          // Regular tenant user
+          if (!safeTenantId.value || !String(safeTenantId.value).trim()) {
+            throw new Error('Tenant ID is required for report generation');
+          }
+          params.entityId = safeTenantId.value;
+        }
+
+        // Temple selection
+        if (selectedTemple.value && selectedTemple.value !== 'all') {
+          params.templeId = selectedTemple.value.toString();
+        }
+
+        console.log('Built report params:', params);
+        return params;
+      } catch (error) {
+        console.error('Error building report params:', error);
+        throw error;
+      }
+    };
+
+    const fetchPreview = async () => {
+      try {
+        if (!fromSuperadmin.value && !safeTenantId.value) {
+          console.warn('No tenant ID available for preview');
+          showToast('Tenant information is missing. Please refresh the page.', 'error');
+          return;
+        }
+        if (fromSuperadmin.value && (!safeTenantIds.value || safeTenantIds.value.length === 0)) {
+          console.warn('No tenant IDs available for superadmin preview');
+          showToast('No tenants selected. Please go back and select tenants.', 'error');
+          return;
+        }
+
+        let previewParams;
+        try {
+          const params = buildReportParams();
+          previewParams = { ...params };
+          delete previewParams.format;
+        } catch (error) {
+          console.error('Error building preview params:', error);
+          showToast(error?.message || 'Error building parameters', 'error');
+          return;
+        }
+
+        if (!reportsStore) {
+          showToast('Reports store is not available', 'error');
+          return;
+        }
+
+        if (typeof reportsStore.getTempleRegisteredPreview === 'function') {
+          const result = await reportsStore.getTempleRegisteredPreview(previewParams);
+          if (result && (result.temples || result.data)) {
+            console.log('Temple registered preview loaded successfully');
+          } else {
+            console.warn('No temple register data returned');
+            showToast('No temple data found for selected criteria', 'info');
+          }
+        } else {
+          console.error('getTempleRegisteredPreview method not found in reports store');
+          showToast('Temple register report preview is not available', 'error');
+        }
+      } catch (error) {
+        console.error('Error fetching preview:', error);
+
+        const errorMessage = error?.message || 'Unknown error';
+
+        if (errorMessage.includes('temples') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
+          showToast('Error loading temple data. Please check your permissions or adjust your filters.', 'error');
+        } else if (errorMessage.includes('Entity ID') || errorMessage.includes('tenants')) {
+          showToast('Invalid tenant configuration. Please refresh the page or contact support.', 'error');
+        } else {
+          showToast(`Failed to fetch report preview: ${errorMessage}`, 'error');
+        }
+      }
+    };
+
+    const downloadReport = async () => {
+      try {
+        clearError();
+
+        if (!fromSuperadmin.value && !safeTenantId.value) {
+          showToast('Tenant information is missing. Please refresh the page.', 'error');
+          return;
+        }
+
+        if (fromSuperadmin.value && (!safeTenantIds.value || safeTenantIds.value.length === 0)) {
+          showToast('Tenant selection is required. Please go back and select tenants.', 'error');
+          return;
+        }
+
+        if (activeFilter.value === 'custom' && (!startDate.value || !endDate.value)) {
+          showToast('Please select both start and end dates for custom range', 'error');
+          return;
+        }
+
+        if (new Date(startDate.value) > new Date(endDate.value)) {
+          showToast('Start date must be before end date', 'error');
+          return;
+        }
+
+        if (!selectedFormat.value) {
+          showToast('Please select a format for the report', 'error');
+          return;
+        }
+
+        let params;
+        try {
+          params = buildReportParams();
+        } catch (error) {
+          showToast(error?.message || 'Error building parameters', 'error');
+          return;
+        }
+
+        if (!params.entityId && !params.entityIds) {
+          showToast('Entity ID is required for report generation', 'error');
+          return;
+        }
+
+        if (!params.format) {
+          showToast('Format is required for report generation', 'error');
+          return;
+        }
+
+        if (!reportsStore) {
+          showToast('Reports store is not available', 'error');
+          return;
+        }
+
+        let result;
+        try {
+          if (typeof reportsStore.downloadTempleRegisteredReport === 'function') {
+            result = await reportsStore.downloadTempleRegisteredReport(params);
+          } else {
+            throw new Error('Temple register report download functionality is not available');
+          }
+        } catch (downloadError) {
+          console.error('Download error details:', downloadError);
+          const errorMessage = downloadError?.message || 'Unknown error';
+          if (errorMessage.includes('temples') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
+            throw new Error('Error accessing temple data. Please check your permissions and try again.');
+          } else {
+            throw downloadError;
+          }
+        }
+
+        showToast(
+          `Temple Register Report downloaded successfully in ${getFormatLabel(selectedFormat.value)} format`,
+          'success'
+        );
+
+        console.log('Download completed successfully:', result);
+      } catch (error) {
+        console.error('Error downloading report:', error);
+        const errorMessage = error?.message || 'Unknown error';
+
+        if (errorMessage.includes('Entity ID') || errorMessage.includes('format')) {
+          showToast('Required parameters are missing. Please try again or contact support.', 'error');
+        } else if (errorMessage.includes('temples') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
+          showToast('Error accessing temple data. Please check your permissions and try again.', 'error');
+        } else if (errorMessage.includes('functionality is not available')) {
+          showToast(errorMessage, 'warning');
+        } else if (errorMessage.includes('tenants') || errorMessage.includes('Entity')) {
+          showToast('Tenant configuration error. Please refresh the page or contact support.', 'error');
+        } else {
+          showToast(`Failed to download report: ${errorMessage}`, 'error');
+        }
+      }
+    };
+
+    // Key method to load temples - this is where we fix the issue
+    const loadTemplesForTenant = async (tenantId) => {
+      try {
+        if (!tenantId) {
+          console.error('No tenant ID provided for loading temples');
+          return;
+        }
+        
+        console.log(`🔍 Loading temples for tenant ID: ${tenantId}`);
+        
+        if (!templeStore) {
+          console.error('Temple store is not available');
+          return;
+        }
+
+        // Clear any existing temples to avoid mixing data
+        if (typeof templeStore.clearTempleData === 'function') {
+          templeStore.clearTempleData();
+        }
+
+        // Try to load temples with superadmin approach first
+        if (fromSuperadmin.value) {
+          console.log('Loading temples using superadmin method');
+          await templeStore.fetchTemplesForSuperAdmin(tenantId);
+        } else {
+          console.log('Loading temples using regular tenant method');
+          await templeStore.fetchTemples(tenantId);
+        }
+
+        console.log(`Successfully loaded ${templeStore.temples.length} temples for tenant ${tenantId}`);
+      } catch (error) {
+        console.error(`Error loading temples for tenant ${tenantId}:`, error);
+        showToast('Failed to load temples. Please try again.', 'error');
+      }
+    };
+
+    // Lifecycle hooks and watchers
+    onMounted(async () => {
+      console.log('Component mounted');
+      console.log('From superadmin:', fromSuperadmin.value);
+      console.log('Tenant ID:', safeTenantId.value);
+      console.log('Tenant IDs:', safeTenantIds.value);
+
+      if (!templeStore || !reportsStore) {
+        showToast('Required data stores are not available. Please refresh the page.', 'error');
+        return;
+      }
+
+      // First clear any existing data
+      if (typeof templeStore.clearTempleData === 'function') {
+        templeStore.clearTempleData();
+      }
+      if (typeof reportsStore.clearReportData === 'function') {
+        reportsStore.clearReportData();
+      }
+
+      // Load temples for the current tenant(s)
+      if (fromSuperadmin.value && safeTenantIds.value && safeTenantIds.value.length > 0) {
+        if (safeTenantIds.value.length === 1) {
+          // Single tenant ID for superadmin view
+          await loadTemplesForTenant(safeTenantIds.value[0]);
+        } else {
+          // Handle multiple tenant IDs
+          console.log(`Loading temples for ${safeTenantIds.value.length} tenants`);
+          for (const tenantId of safeTenantIds.value) {
+            await loadTemplesForTenant(tenantId);
+          }
+        }
+      } else if (!fromSuperadmin.value && safeTenantId.value) {
+        // Regular tenant user
+        await loadTemplesForTenant(safeTenantId.value);
+      }
+
+      // After loading temples, fetch the initial preview
+      await fetchPreview();
+    });
+
+    // Watch for changes in selected filters
+    watch([selectedTemple, activeStatus], () => {
+      console.log('Filters changed - Temple:', selectedTemple.value, 'Status:', activeStatus.value);
+      fetchPreview();
+    });
+
+    watch(activeFilter, () => {
+      console.log('Active filter changed to:', activeFilter.value);
+      // fetchPreview is called inside setActiveFilter
+    });
+
+    return {
+      // States
+      selectedTemple,
+      activeFilter,
+      activeStatus,
+      selectedFormat,
+      startDate,
+      endDate,
+      
+      // Filter options
+      timeFilters,
+      statusFilters,
+      formats,
+      
+      // Computed
+      safeTenantId,
+      fromSuperadmin,
+      safeTenantIds,
+      safeUserName,
+      safeError,
+      safeTemples,
+      isGeneralLoading,
+      isDownloadLoading,
+      isLoading,
+      safeReportPreview,
+      hasValidReportData,
+      reportPreviewColumns,
+      reportPreviewData,
+      
+      // Methods
+      clearError,
+      setActiveFilter,
+      setActiveStatus,
+      getTempleName,
+      getTimeFilterLabel,
+      getStatusFilterLabel,
+      getFormatLabel,
+      formatDate,
+      fetchPreview,
+      downloadReport,
+    };
   }
-};
-
-// Lifecycle hooks
-onMounted(async () => {
-  // Initialize default dates
-  initializeDates();
-  
-  // Fetch temples if not already loaded
-  if (templeStore.temples.length === 0) {
-    try {
-      await templeStore.fetchTemples(tenantId.value);
-    } catch (error) {
-      console.error('Error loading temple data:', error);
-      showToast('Failed to load temple data. Please try again.', 'error');
-      errorMessage.value = 'Failed to load temple data. Some features may not work correctly.';
-    }
-  }
-});
+}
 </script>

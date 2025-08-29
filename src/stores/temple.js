@@ -68,6 +68,7 @@ export const useTempleStore = defineStore('temple', () => {
   const clearTempleData = () => {
     temples.value = []
     currentTemple.value = null
+    console.log('🧹 Temple data cleared')
   }
 
   // Actions
@@ -78,78 +79,196 @@ export const useTempleStore = defineStore('temple', () => {
       
       console.log(`🏛️ Fetching temples for tenant ID ${tenantId || 'unknown'}...`)
       
-      // Add headers for tenant ID if provided
-      const options = {}
-      if (tenantId) {
-        options.headers = {
-          'X-Tenant-ID': tenantId
+      // Try multiple approaches to get temples
+      let templeResults = []
+      
+      // First attempt - direct API call with tenant_id
+      try {
+        console.log('🔍 ATTEMPT 1: Direct API call with tenant_id')
+        const timestamp = Date.now()
+        const response = await templeService.getTemples({ tenantId: tenantId })
+        if (response && Array.isArray(response) && response.length > 0) {
+          console.log(`✅ ATTEMPT 1 successful: Found ${response.length} temples`)
+          templeResults = response
+        } else {
+          console.log('⚠️ ATTEMPT 1: No temples found or invalid response format')
+        }
+      } catch (err) {
+        console.error('❌ ATTEMPT 1 failed:', err.message)
+      }
+      
+      // Second attempt - try direct entities endpoint if first attempt failed
+      if (templeResults.length === 0) {
+        try {
+          console.log('🔍 ATTEMPT 2: Trying direct entities endpoint')
+          const timestamp = Date.now()
+          const response = await templeService.fetchEntitiesDirectly(tenantId)
+          if (response && Array.isArray(response) && response.length > 0) {
+            console.log(`✅ ATTEMPT 2 successful: Found ${response.length} temples`)
+            templeResults = response
+          } else {
+            console.log('⚠️ ATTEMPT 2: No temples found or invalid response format')
+          }
+        } catch (err) {
+          console.error('❌ ATTEMPT 2 failed:', err.message)
         }
       }
       
-      // Add cache busting to ensure fresh data
-      const timestamp = Date.now()
-      const response = await templeService.getTemples(options, timestamp)
+      // Set temples in store
+      if (templeResults.length > 0) {
+        temples.value = templeResults
+        console.log('🏛️ Temples set in store:', temples.value)
+      } else {
+        temples.value = []
+        console.warn('⚠️ No temples found for tenant ID', tenantId)
+      }
       
-      console.log('🏛️ Temple service response:', response)
-      
-      // The new API structure returns data directly, not response.data
-      temples.value = response || []
-      console.log('🏛️ Temples set in store:', temples.value)
-      
-      return response
+      return templeResults
     } catch (err) {
       const errorMessage = err.message || 'Failed to fetch temples'
       error.value = errorMessage
       toast.error(errorMessage)
       console.error('Error fetching temples:', err)
-      throw err
+      return []
     } finally {
       loading.value = false
     }
   }
 
-  // This is just the updated method to add to the temple.js store
-// This is the updated fetchTemplesForSuperAdmin method for temple.js store
-const fetchTemplesForSuperAdmin = async (tenantId) => {
-  console.log(`🏛️ Fetching temples for SuperAdmin for tenant ID ${tenantId}...`);
-  // Clear existing temples before fetching new ones
-  temples.value = [];
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    if (!tenantId) {
-      console.warn('No tenant ID provided for fetchTemplesForSuperAdmin');
+  // Updated fetchTemplesForSuperAdmin method with improved multiple tenant handling
+  const fetchTemplesForSuperAdmin = async (tenantIds) => {
+    console.log(`🏛️ Fetching temples for SuperAdmin for tenant ID(s):`, tenantIds);
+    // Clear existing temples before fetching new ones
+    temples.value = [];
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      if (!tenantIds) {
+        console.error('❌ No tenant IDs provided for fetchTemplesForSuperAdmin');
+        error.value = 'No tenant IDs provided';
+        return [];
+      }
+      
+      // Handle both single tenant ID and array of tenant IDs
+      if (Array.isArray(tenantIds)) {
+        if (tenantIds.length === 0) {
+          console.error('❌ Empty tenant IDs array provided for fetchTemplesForSuperAdmin');
+          error.value = 'No tenant IDs provided';
+          return [];
+        }
+        
+        console.log(`🔄 Starting fetch for ${tenantIds.length} tenant IDs:`, tenantIds);
+        
+        // For multiple tenants, we need to fetch and combine temples from all tenants
+        let allTemples = [];
+        
+        // Option 1: Try sending all tenant IDs in a single request
+        try {
+          console.log('🔍 ATTEMPT 1: Using combined API call for all tenants');
+          const response = await templeService.getSuperAdminTemples(tenantIds);
+          
+          if (response && Array.isArray(response) && response.length > 0) {
+            console.log(`✅ Combined call successful: Found ${response.length} temples`);
+            allTemples = response;
+          } else {
+            console.log('⚠️ Combined call returned no temples, trying individual requests');
+          }
+        } catch (err) {
+          console.error('❌ Combined API call failed:', err.message);
+        }
+        
+        // Option 2: If combined call failed or returned no temples, fetch each tenant individually
+        if (allTemples.length === 0) {
+          console.log('🔍 ATTEMPT 2: Fetching temples for each tenant individually');
+          
+          const fetchPromises = tenantIds.map(tenantId => {
+            return templeService.fetchEntitiesDirectly(tenantId)
+              .then(temples => {
+                console.log(`✅ Found ${temples.length} temples for tenant ${tenantId}`);
+                return temples;
+              })
+              .catch(err => {
+                console.error(`❌ Failed to fetch temples for tenant ${tenantId}:`, err.message);
+                return []; // Return empty array for failed tenant to avoid breaking Promise.all
+              });
+          });
+          
+          // Wait for all tenant requests to complete
+          const results = await Promise.all(fetchPromises);
+          
+          // Combine all temple results
+          results.forEach(temples => {
+            if (Array.isArray(temples) && temples.length > 0) {
+              allTemples.push(...temples);
+            }
+          });
+          
+          console.log(`✅ Individual fetches completed: Found ${allTemples.length} temples in total`);
+        }
+        
+        // Set temples in store
+        if (allTemples.length > 0) {
+          temples.value = allTemples;
+          console.log(`🏛️ Set ${allTemples.length} temples in store`);
+        } else {
+          temples.value = [];
+          console.warn('⚠️ No temples found for any of the selected tenants');
+        }
+        
+        return temples.value;
+      } else {
+        // Single tenant ID case - use existing method
+        console.log(`🔄 Fetching temples for single tenant ID: ${tenantIds}`);
+        
+        let templeResults = [];
+        
+        // First attempt
+        try {
+          console.log('🔍 Trying temple service call');
+          const response = await templeService.getSuperAdminTemples(tenantIds);
+          
+          if (response && Array.isArray(response) && response.length > 0) {
+            console.log(`✅ Found ${response.length} temples for tenant ${tenantIds}`);
+            templeResults = response;
+          } else {
+            console.log('⚠️ No temples found or invalid response, trying direct endpoint');
+          }
+        } catch (err) {
+          console.error('❌ Temple service call failed:', err.message);
+        }
+        
+        // Second attempt if first failed
+        if (templeResults.length === 0) {
+          try {
+            console.log('🔍 Trying direct entities endpoint');
+            const response = await templeService.fetchEntitiesDirectly(tenantIds);
+            
+            if (response && Array.isArray(response) && response.length > 0) {
+              console.log(`✅ Found ${response.length} temples using direct endpoint`);
+              templeResults = response;
+            } else {
+              console.log('⚠️ Direct endpoint returned no temples');
+            }
+          } catch (err) {
+            console.error('❌ Direct endpoint call failed:', err.message);
+          }
+        }
+        
+        // Set temples in store
+        temples.value = templeResults;
+        console.log(`🏛️ Set ${templeResults.length} temples in store for tenant ${tenantIds}`);
+        
+        return temples.value;
+      }
+    } catch (err) {
+      console.error(`❌ Error in fetchTemplesForSuperAdmin:`, err);
+      error.value = `Failed to fetch temples: ${err.message || 'Unknown error'}`;
       return [];
+    } finally {
+      loading.value = false;
     }
-    
-    console.log(`🔄 Starting fresh fetch for tenant ID ${tenantId}`);
-    
-    // Use the existing getTemples method with superAdmin flag and tenantId
-    // Force a fresh fetch with cache busting
-    const response = await templeService.getTemples({
-      tenantId: tenantId,
-      superAdmin: true,
-      timestamp: Date.now() // Add timestamp for cache busting
-    });
-    
-    if (response && Array.isArray(response)) {
-      temples.value = response;
-      console.log(`🏛️ Temple service response for SuperAdmin: ${response.length} temples for tenant ${tenantId}`);
-    } else {
-      temples.value = [];
-      console.warn(`No temples returned for tenant ID ${tenantId}`);
-    }
-    
-    return temples.value;
-  } catch (err) {
-    console.error(`❌ Error fetching temples for SuperAdmin:`, err);
-    error.value = `Failed to fetch temples: ${err.message || 'Unknown error'}`;
-    return [];
-  } finally {
-    loading.value = false;
   }
-}
 
   const createTemple = async (templeData) => {
     try {
