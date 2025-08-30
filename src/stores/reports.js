@@ -11,6 +11,7 @@ export const useReportsStore = defineStore('reports', () => {
   const reportPreview = ref(null)
   const lastReportParams = ref(null)
   
+  
   // MISSING REACTIVE VARIABLES - ADDED
   const devoteeList = ref([])
   const devoteeProfile = ref(null)
@@ -215,36 +216,44 @@ export const useReportsStore = defineStore('reports', () => {
   // Add these methods to your Pinia store (useReportsStore)
 
   // APPROVAL STATUS REPORT METHODS
-  const fetchApprovalStatusReport = async (params) => {
-    try {
-      loading.value = true
-      error.value = null
+const fetchApprovalStatusReport = async (params) => {
+  try {
+    loading.value = true
+    error.value = null
 
-      // Store params for reference
-      lastReportParams.value = { ...params, type: 'approval-status' }
+    // Add the first console log here - before API call
+    console.log('Fetching approval status with params:', params);
 
-      // Add isSuperAdmin flag if entityIds is present
-      if (params.entityIds && Array.isArray(params.entityIds)) {
-        params.isSuperAdmin = true
-      }
+    // Store params for reference
+    lastReportParams.value = { ...params, type: 'approval-status' }
 
-      // Fetch report data
-      const response = await reportsService.getApprovalStatusReport(params)
-      currentReport.value = response
-
-      // Get formatted preview
-      const preview = await reportsService.getApprovalStatusPreview(params)
-      reportPreview.value = preview
-
-      return response
-    } catch (err) {
-      error.value = err.message || 'Failed to fetch approval status report'
-      console.error('Error in fetchApprovalStatusReport:', err)
-      throw err
-    } finally {
-      loading.value = false
+    // Add isSuperAdmin flag if entityIds is present
+    if (params.entityIds && Array.isArray(params.entityIds)) {
+      params.isSuperAdmin = true
     }
+
+    // Fetch report data
+    const response = await reportsService.getApprovalStatusReport(params)
+    
+    // Add these console logs after the API call
+    console.log('Approval status API response:', response);
+    console.log('Response data structure:', response.data);
+    
+    currentReport.value = response
+
+    // Get formatted preview
+    const preview = await reportsService.getApprovalStatusPreview(params)
+    reportPreview.value = preview
+
+    return response
+  } catch (err) {
+    error.value = err.message || 'Failed to fetch approval status report'
+    console.error('Error in fetchApprovalStatusReport:', err)
+    throw err
+  } finally {
+    loading.value = false
   }
+}
 
   const downloadApprovalStatusReport = async (params) => {
     try {

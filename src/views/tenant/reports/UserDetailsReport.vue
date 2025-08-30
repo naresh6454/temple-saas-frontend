@@ -403,16 +403,11 @@ const buildReportParams = () => {
     const params = {
       entityIds: tenantIds.value,
       dateRange: activeFilter.value,
-      format: selectedFormat.value,
-      role: activeRole.value !== 'all' ? activeRole.value : undefined
+      role: activeRole.value !== 'all' ? activeRole.value : undefined,
+      status: activeStatus.value !== 'all' ? activeStatus.value : undefined
     };
 
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
+    // Add custom date range if needed
     if (activeFilter.value === 'custom') {
       params.startDate = startDate.value;
       params.endDate = endDate.value;
@@ -424,16 +419,11 @@ const buildReportParams = () => {
     const params = {
       entityId: tenantId.value,
       dateRange: activeFilter.value,
-      format: selectedFormat.value,
-      role: activeRole.value !== 'all' ? activeRole.value : undefined
+      role: activeRole.value !== 'all' ? activeRole.value : undefined,
+      status: activeStatus.value !== 'all' ? activeStatus.value : undefined
     };
 
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
+    // Add custom date range if needed
     if (activeFilter.value === 'custom') {
       params.startDate = startDate.value;
       params.endDate = endDate.value;
@@ -450,34 +440,15 @@ const downloadReport = async () => {
   isDownloading.value = true;
 
   try {
-    const params = buildReportParams();
+    const params = {
+      ...buildReportParams(),
+      format: selectedFormat.value,
+      isSuperAdmin: fromSuperadmin.value
+    };
     
-    // Add the report type to the params
-    params.type = 'user-details';
-    
-    // Validate parameters
-    // Note: You might need to add this validation method to your ReportsService
-    const validation = { isValid: true, errors: [] }; // Placeholder validation
-    
-    if (!validation.isValid) {
-      throw new Error(validation.errors.join(', '));
-    }
-
-    // Console logging
-    console.log('Downloading User Details report with the following parameters:');
-    console.log('- Role:', getRoleLabel(activeRole.value));
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      console.log('- Tenants:', tenantIds.value.length, 'selected');
-    } else {
-      console.log('- Tenant ID:', tenantId.value);
-    }
-    console.log('- Time filter:', getTimeFilterLabel(activeFilter.value));
-    console.log('- Date range:', formatDate(startDate.value), 'to', formatDate(endDate.value));
-    console.log('- Status:', getStatusFilterLabel(activeStatus.value));
-    console.log('- Format:', getFormatLabel(selectedFormat.value));
+    console.log('Downloading User Details report with the following parameters:', params);
 
     // Call the service method
-    // Note: You might need to implement this method in your ReportsService
     const result = await ReportsService.downloadUserDetailsReport(params);
     
     // Show success message
@@ -491,6 +462,39 @@ const downloadReport = async () => {
     isDownloading.value = false;
   }
 };
+
+const previewReport = async () => {
+  if (isDownloading.value || !isFormValid.value) return;
+
+  clearError();
+  isPreviewLoading.value = true;
+
+  try {
+    const params = {
+      ...buildReportParams(),
+      isSuperAdmin: fromSuperadmin.value
+    };
+    
+    console.log('Previewing User Details report with the following parameters:', params);
+
+    // Call the service method
+    const result = await ReportsService.getUserDetailsPreview(params);
+    
+    // Update preview data
+    previewData.value = result;
+    
+    // Show success message
+    showToast(`Preview loaded with ${result.totalRecords} records`, 'success');
+    
+  } catch (error) {
+    console.error('Preview failed:', error);
+    errorMessage.value = error.message || 'Failed to preview report. Please try again.';
+    showToast(`Preview failed: ${error.message}`, 'error');
+  } finally {
+    isPreviewLoading.value = false;
+  }
+};
+
 
 // Lifecycle hooks
 onMounted(() => {
