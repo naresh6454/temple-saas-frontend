@@ -416,6 +416,59 @@ const fetchDirectByTenant = async (tenantId) => {
     }
   }
 
+  // Add this method to temple.store.js
+const fetchTemplesForAssignedTenant = async (tenantId) => {
+  try {
+    console.log(`Fetching temples for assigned tenant ID: ${tenantId}`);
+    
+    // Set headers for API call
+    const headers = {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      'X-Tenant-ID': tenantId
+    };
+    
+    // Try multiple endpoints to handle different API patterns
+    const endpoints = [
+      `/v1/tenant/${tenantId}/entities`,
+      `/v1/tenant/entities?tenant_id=${tenantId}`,
+      `/v1/entities?tenant_id=${tenantId}`
+    ];
+    
+    let temples = [];
+    let success = false;
+    
+    // Try each endpoint until one works
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}`);
+        const response = await fetch(endpoint, { headers });
+        
+        if (response.ok) {
+          const data = await response.json();
+          temples = data.entities || data.data || data;
+          success = true;
+          console.log(`Success with endpoint ${endpoint}, found ${temples.length} temples`);
+          break;
+        }
+      } catch (error) {
+        console.warn(`Failed with endpoint ${endpoint}: ${error.message}`);
+      }
+    }
+    
+    if (!success) {
+      console.error('All endpoints failed for assigned tenant temples');
+      return [];
+    }
+    
+    // Update store state
+    temples.value = temples;
+    return temples;
+  } catch (error) {
+    console.error(`Error fetching temples for assigned tenant: ${error}`);
+    return [];
+  }
+}
+
   const setCurrentTemple = (temple) => {
     currentTemple.value = temple
   }

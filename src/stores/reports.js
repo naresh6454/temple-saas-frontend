@@ -557,192 +557,191 @@ const fetchApprovalStatusReport = async (params) => {
   }
 
   // DEVOTEE BIRTHDAYS REPORT METHODS
-  /**
-   * Fetch devotee birthdays report data (JSON preview)
-   */
-  const fetchDevoteeBirthdaysReport = async (params) => {
-    try {
-      loading.value = true
-      error.value = null
 
-      // Store params for reference
-      lastReportParams.value = { ...params, type: 'devotee-birthdays' }
 
-      // Fetch report data
-      const response = await reportsService.getDevoteeBirthdaysReport(params)
-      currentReport.value = response
+/**
+ * Fetch devotee birthdays report data (JSON preview)
+ */
+const fetchDevoteeBirthdaysReport = async (params) => {
+  try {
+    loading.value = true
+    error.value = null
 
-      // Get formatted preview
-      const preview = await reportsService.getDevoteeBirthdaysPreview(params)
-      reportPreview.value = preview
+    lastReportParams.value = { ...params, type: 'devotee-birthdays' }
 
-      return response
-    } catch (err) {
-      error.value = err.message || 'Failed to fetch devotee birthdays report'
-      console.error('Error in fetchDevoteeBirthdaysReport:', err)
-      throw err
-    } finally {
-      loading.value = false
-    }
+    console.log('Fetching birthdays report with params:', params)
+
+    const response = await reportsService.getDevoteeBirthdaysReport(params)
+    console.log('Birthdays report response:', response)
+    currentReport.value = response
+
+    const preview = await reportsService.getDevoteeBirthdaysPreview(params)
+    console.log('Birthdays preview response:', preview)
+    reportPreview.value = preview
+
+    return response
+  } catch (err) {
+    error.value = err.message || 'Failed to fetch devotee birthdays report'
+    console.error('Error in fetchDevoteeBirthdaysReport:', err)
+    throw err
+  } finally {
+    loading.value = false
   }
+}
 
-  /**
-   * Download devotee birthdays report in specified format
-   */
-  const downloadDevoteeBirthdaysReport = async (params) => {
-    try {
-      downloadLoading.value = true
-      error.value = null
+/**
+ * Download devotee birthdays report in specified format
+ */
+const downloadDevoteeBirthdaysReport = async (params) => {
+  try {
+    downloadLoading.value = true
+    error.value = null
 
-      // Add isSuperAdmin flag if entityIds is present
-      if (params.entityIds && Array.isArray(params.entityIds)) {
-        params.isSuperAdmin = true
-      }
-
-      // Download report
-      const result = await reportsService.downloadDevoteeBirthdaysReport(params)
-      
-      // Store successful download params
-      lastReportParams.value = { ...params, type: 'devotee-birthdays' }
-
-      return result
-    } catch (err) {
-      error.value = err.message || 'Failed to download devotee birthdays report'
-      console.error('Error in downloadDevoteeBirthdaysReport:', err)
-      throw err
-    } finally {
-      downloadLoading.value = false
+    if (params.entityIds && Array.isArray(params.entityIds)) {
+      params.isSuperAdmin = true
     }
+
+    console.log('Downloading birthdays report with params:', params)
+
+    const result = await reportsService.downloadDevoteeBirthdaysReport(params)
+    console.log('Download result:', result)
+
+    lastReportParams.value = { ...params, type: 'devotee-birthdays' }
+
+    return result
+  } catch (err) {
+    error.value = err.message || 'Failed to download devotee birthdays report'
+    console.error('Error in downloadDevoteeBirthdaysReport:', err)
+    throw err
+  } finally {
+    downloadLoading.value = false
   }
+}
 
-  /**
-   * Get devotee birthdays preview with loading state
-   */
-  const getDevoteeBirthdaysPreview = async (params) => {
-    try {
-      loading.value = true
-      error.value = null
+/**
+ * Get devotee birthdays preview with loading state
+ */
+const getDevoteeBirthdaysPreview = async (params) => {
+  try {
+    loading.value = true
+    error.value = null
 
-      // Add isSuperAdmin flag if entityIds is present
-      if (params.entityIds && Array.isArray(params.entityIds)) {
-        params.isSuperAdmin = true
-      }
-
-      const preview = await reportsService.getDevoteeBirthdaysPreview(params)
-      reportPreview.value = preview
-      lastReportParams.value = { ...params, type: 'devotee-birthdays' }
-
-      return preview
-    } catch (err) {
-      error.value = err.message || 'Failed to get devotee birthdays preview'
-      console.error('Error in getDevoteeBirthdaysPreview:', err)
-      throw err
-    } finally {
-      loading.value = false
+    if (params.entityIds && Array.isArray(params.entityIds)) {
+      params.isSuperAdmin = true
     }
+
+    console.log('Fetching birthdays preview with params:', params)
+
+    const preview = await reportsService.getDevoteeBirthdaysPreview(params)
+    console.log('Preview response:', preview)
+
+    reportPreview.value = preview
+    lastReportParams.value = { ...params, type: 'devotee-birthdays' }
+
+    return preview
+  } catch (err) {
+    error.value = err.message || 'Failed to get devotee birthdays preview'
+    console.error('Error in getDevoteeBirthdaysPreview:', err)
+    throw err
+  } finally {
+    loading.value = false
   }
+}
 
-  // DEVOTEE LIST REPORT METHODS
-  const fetchDevoteeListReport = async (params) => {
-    try {
-      loading.value = true
-      error.value = null
-      
-      const { entityId, entityIds, status = 'all' } = params
-      lastReportParams.value = { ...params, type: 'devotee-list' }
-      
-      // Add isSuperAdmin flag if entityIds is present
-      if (entityIds && Array.isArray(entityIds)) {
-        params.isSuperAdmin = true
-      }
-      
-      const response = await reportsService.getDevoteeList(params)
-      currentReport.value = response
-      
-      // Safely unwrap nested data with comprehensive null safety
-      let responseData = null
-      
-      if (response && response.data) {
-        responseData = response.data
-        // Handle nested data structure
-        if (responseData && responseData.data) {
-          responseData = responseData.data
-        }
-      }
+// DEVOTEE LIST REPORT METHODS
+const fetchDevoteeListReport = async (params) => {
+  try {
+    loading.value = true
+    error.value = null
 
-      // Defensive assignment to devoteeList.value with multiple fallback paths
-      if (Array.isArray(responseData)) {
-        devoteeList.value = responseData
-      } else if (responseData && Array.isArray(responseData.devotees)) {
-        devoteeList.value = responseData.devotees
-      } else if (responseData && Array.isArray(responseData.data)) {
-        devoteeList.value = responseData.data
-      } else if (response && response.devotees && Array.isArray(response.devotees)) {
-        devoteeList.value = response.devotees
-      } else {
-        console.warn('No valid devotee data found in response:', response)
-        devoteeList.value = []
-      }
-      
-      devoteeListStatus.value = status
-      
-      const preview = await reportsService.getDevoteeListPreview(params)
-      reportPreview.value = preview
-      
-      return response
-    } catch (err) {
-      error.value = err.message || 'Failed to fetch devotee list report'
-      console.error('Error in fetchDevoteeListReport:', err)
-      devoteeList.value = [] // Reset on error
-      throw err
-    } finally {
-      loading.value = false
+    const { entityId, entityIds, status = 'all' } = params
+
+    // Save last report params
+    lastReportParams.value = { ...params, type: 'devotee-list' }
+
+    // Mark as superadmin if multiple entity IDs are present
+    if (entityIds && Array.isArray(entityIds) && entityIds.length > 0) {
+      params.isSuperAdmin = true
     }
-  }
 
-  const downloadDevoteeListReport = async (params) => {
-    try {
-      downloadLoading.value = true
-      error.value = null
-      
-      const { format } = params
-      if (!format) {
-        throw new Error('Format is required for download')
-      }
-      
-      // Add isSuperAdmin flag if entityIds is present
-      if (params.entityIds && Array.isArray(params.entityIds)) {
-        params.isSuperAdmin = true
-      }
-      
-      const result = await reportsService.downloadDevoteeListReport(params)
-      lastReportParams.value = { ...params, type: 'devotee-list' }
-      return result
-    } catch (err) {
-      error.value = err.message || 'Failed to download devotee list report'
-      console.error('Error in downloadDevoteeListReport:', err)
-      throw err
-    } finally {
-      downloadLoading.value = false
-    }
-  }
+    // Fetch devotee list
+    const response = await reportsService.getDevoteeList(params)
+    currentReport.value = response
 
-  const setDevoteeListStatus = async (entityId, status) => {
-    try {
-      loading.value = true
-      error.value = null
-      devoteeListStatus.value = status
-      
-      const params = { entityId, status }
-      await fetchDevoteeListReport(params)
-    } catch (err) {
-      error.value = err.message || 'Failed to filter devotee list'
-      console.error('Error in setDevoteeListStatus:', err)
-      throw err
-    } finally {
-      loading.value = false
+    // Safely unwrap nested response data
+    let data = response?.data?.data || response?.data || null
+    if (!data) data = response?.devotees || []
+
+    // Assign to devoteeList with fallbacks
+    if (Array.isArray(data)) {
+      devoteeList.value = data
+    } else if (Array.isArray(data.devotees)) {
+      devoteeList.value = data.devotees
+    } else if (Array.isArray(data.data)) {
+      devoteeList.value = data.data
+    } else {
+      console.warn('No valid devotee data found in response:', response)
+      devoteeList.value = []
     }
+
+    devoteeListStatus.value = status
+
+    // Fetch preview
+    const preview = await reportsService.getDevoteeListPreview(params)
+    reportPreview.value = preview
+
+    return response
+  } catch (err) {
+    error.value = err.message || 'Failed to fetch devotee list report'
+    console.error('Error in fetchDevoteeListReport:', err)
+    devoteeList.value = []
+    reportPreview.value = { data: [], columns: [], totalRecords: 0 }
+    throw err
+  } finally {
+    loading.value = false
   }
+}
+
+const downloadDevoteeListReport = async (params) => {
+  try {
+    downloadLoading.value = true
+    error.value = null
+
+    const { format } = params
+    if (!format) throw new Error('Format is required for download')
+
+    if (params.entityIds && Array.isArray(params.entityIds) && params.entityIds.length > 0) {
+      params.isSuperAdmin = true
+    }
+
+    const result = await reportsService.downloadDevoteeListReport(params)
+    lastReportParams.value = { ...params, type: 'devotee-list' }
+    return result
+  } catch (err) {
+    error.value = err.message || 'Failed to download devotee list report'
+    console.error('Error in downloadDevoteeListReport:', err)
+    throw err
+  } finally {
+    downloadLoading.value = false
+  }
+}
+
+const setDevoteeListStatus = async (entityId, status) => {
+  try {
+    loading.value = true
+    error.value = null
+    devoteeListStatus.value = status
+
+    const params = { entityId, status }
+    await fetchDevoteeListReport(params)
+  } catch (err) {
+    error.value = err.message || 'Failed to filter devotee list'
+    console.error('Error in setDevoteeListStatus:', err)
+    throw err
+  } finally {
+    loading.value = false
+  }
+}
 
   // DEVOTEE PROFILE METHODS
   const fetchDevoteeProfile = async (params) => {

@@ -19,32 +19,6 @@
       </div>
     </div>
 
-    <!-- Error Alert -->
-    <div v-if="error" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-      <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-        <div class="flex">
-          <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <div>
-            <h3 class="text-sm font-medium text-red-800 mb-1">Registration Failed</h3>
-            <p class="text-sm text-red-700">{{ error }}</p>
-            <ul v-if="validationErrors.length > 0" class="mt-2 text-sm text-red-700">
-              <li v-for="(err, index) in validationErrors" :key="index" class="flex items-center">
-                <span class="w-1 h-1 bg-red-400 rounded-full mr-2"></span>
-                {{ err }}
-              </li>
-            </ul>
-          </div>
-          <button @click="clearError" class="ml-auto">
-            <svg class="w-4 h-4 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Progress Indicator -->
@@ -82,14 +56,9 @@
                   v-model="form.name"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Enter temple name"
-                  @input="clearFieldError('name')"
                 />
-                <p v-if="fieldErrors.name" class="mt-1 text-sm text-red-600">{{ fieldErrors.name }}</p>
               </div>
 
               <!-- Deity -->
@@ -102,14 +71,9 @@
                   v-model="form.main_deity"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.main_deity ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="e.g., Lord Vishnu, Goddess Lakshmi"
-                  @input="clearFieldError('main_deity')"
                 />
-                <p v-if="fieldErrors.main_deity" class="mt-1 text-sm text-red-600">{{ fieldErrors.main_deity }}</p>
               </div>
 
               <!-- Temple Type -->
@@ -121,11 +85,7 @@
                   id="templeType"
                   v-model="form.temple_type"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.temple_type ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
-                  @change="clearFieldError('temple_type')"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                 >
                   <option value="">Select temple type</option>
                   <option value="traditional">Traditional</option>
@@ -133,7 +93,6 @@
                   <option value="heritage">Heritage</option>
                   <option value="community">Community</option>
                 </select>
-                <p v-if="fieldErrors.temple_type" class="mt-1 text-sm text-red-600">{{ fieldErrors.temple_type }}</p>
               </div>
 
               <!-- Established Year -->
@@ -148,14 +107,9 @@
                   min="1800"
                   :max="new Date().getFullYear()"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.established_year ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="YYYY"
-                  @input="clearFieldError('established_year')"
                 />
-                <p v-if="fieldErrors.established_year" class="mt-1 text-sm text-red-600">{{ fieldErrors.established_year }}</p>
               </div>
 
               <!-- Phone -->
@@ -168,14 +122,9 @@
                   v-model="form.phone"
                   type="tel"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="+91 XXXXX XXXXX"
-                  @input="clearFieldError('phone')"
                 />
-                <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
               </div>
 
               <!-- Email -->
@@ -188,14 +137,9 @@
                   v-model="form.email"
                   type="email"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="temple@example.com"
-                  @input="clearFieldError('email')"
                 />
-                <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               </div>
 
               <!-- Description -->
@@ -207,14 +151,9 @@
                   id="description"
                   v-model="form.description"
                   rows="4"
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Brief description of the temple, its history, and significance..."
-                  @input="clearFieldError('description')"
                 ></textarea>
-                <p v-if="fieldErrors.description" class="mt-1 text-sm text-red-600">{{ fieldErrors.description }}</p>
               </div>
             </div>
           </div>
@@ -237,14 +176,9 @@
                   v-model="form.street_address"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.street_address ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Enter complete street address"
-                  @input="clearFieldError('street_address')"
                 />
-                <p v-if="fieldErrors.street_address" class="mt-1 text-sm text-red-600">{{ fieldErrors.street_address }}</p>
               </div>
 
               <!-- City -->
@@ -257,14 +191,9 @@
                   v-model="form.city"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.city ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Enter city name"
-                  @input="clearFieldError('city')"
                 />
-                <p v-if="fieldErrors.city" class="mt-1 text-sm text-red-600">{{ fieldErrors.city }}</p>
               </div>
 
               <!-- State -->
@@ -276,11 +205,7 @@
                   id="state"
                   v-model="form.state"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.state ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
-                  @change="clearFieldError('state')"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                 >
                   <option value="">Select state</option>
                   <option value="Karnataka">Karnataka</option>
@@ -293,8 +218,8 @@
                   <option value="Uttar Pradesh">Uttar Pradesh</option>
                   <option value="West Bengal">West Bengal</option>
                   <option value="Odisha">Odisha</option>
+                  <!-- Add more states as needed -->
                 </select>
-                <p v-if="fieldErrors.state" class="mt-1 text-sm text-red-600">{{ fieldErrors.state }}</p>
               </div>
 
               <!-- District -->
@@ -307,14 +232,9 @@
                   v-model="form.district"
                   type="text"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.district ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Enter district name"
-                  @input="clearFieldError('district')"
                 />
-                <p v-if="fieldErrors.district" class="mt-1 text-sm text-red-600">{{ fieldErrors.district }}</p>
               </div>
 
               <!-- PIN Code -->
@@ -328,14 +248,9 @@
                   type="text"
                   pattern="[0-9]{6}"
                   required
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.pincode ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="Enter 6-digit PIN code"
-                  @input="clearFieldError('pincode')"
                 />
-                <p v-if="fieldErrors.pincode" class="mt-1 text-sm text-red-600">{{ fieldErrors.pincode }}</p>
               </div>
 
               <!-- Landmark -->
@@ -361,14 +276,9 @@
                   id="map_link"
                   v-model="form.map_link"
                   type="url"
-                  :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200',
-                    fieldErrors.map_link ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  ]"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                   placeholder="https://maps.google.com/..."
-                  @input="clearFieldError('map_link')"
                 />
-                <p v-if="fieldErrors.map_link" class="mt-1 text-sm text-red-600">{{ fieldErrors.map_link }}</p>
               </div>
             </div>
           </div>
@@ -398,7 +308,6 @@
                   <p v-if="form.documents.registration" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.registration.name }}
                   </p>
-                  <p v-if="fieldErrors.registration" class="text-sm text-red-600 mt-2">{{ fieldErrors.registration }}</p>
                 </div>
               </div>
 
@@ -419,7 +328,6 @@
                   <p v-if="form.documents.trustDeed" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.trustDeed.name }}
                   </p>
-                  <p v-if="fieldErrors.trustDeed" class="text-sm text-red-600 mt-2">{{ fieldErrors.trustDeed }}</p>
                 </div>
               </div>
 
@@ -473,12 +381,8 @@
                 <input
                   v-model="form.acceptTerms"
                   type="checkbox"
-                  :class="[
-                    'mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded',
-                    fieldErrors.acceptTerms ? 'border-red-300' : ''
-                  ]"
+                  class="mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   required
-                  @change="clearFieldError('acceptTerms')"
                 />
                 <span class="text-sm text-gray-700">
                   I agree to the 
@@ -488,7 +392,6 @@
                   I confirm that all information provided is accurate and complete.
                 </span>
               </label>
-              <p v-if="fieldErrors.acceptTerms" class="mt-1 text-sm text-red-600">{{ fieldErrors.acceptTerms }}</p>
             </div>
           </div>
 
@@ -580,8 +483,6 @@ const toast = useToast()
 const currentStep = ref(1)
 const isSubmitting = ref(false)
 const error = ref(null)
-const validationErrors = ref([])
-const fieldErrors = reactive({})
 
 // Form data with snake_case field names to EXACTLY match backend
 const form = reactive({
@@ -608,189 +509,72 @@ const form = reactive({
   acceptTerms: false
 })
 
-// Field validation rules
-const validationRules = {
-  step1: {
-    name: { required: true, minLength: 2, maxLength: 100 },
-    main_deity: { required: true, minLength: 2, maxLength: 50 },
-    temple_type: { required: true },
-    established_year: { required: true, min: 1800, max: new Date().getFullYear() },
-    phone: { required: true, pattern: /^[0-9+\-\s()]{10,15}$/ },
-    email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }
-  },
-  step2: {
-    street_address: { required: true, minLength: 5, maxLength: 200 },
-    city: { required: true, minLength: 2, maxLength: 50 },
-    state: { required: true },
-    district: { required: true, minLength: 2, maxLength: 50 },
-    pincode: { required: true, pattern: /^\d{6}$/ }
-  },
-  step3: {
-    acceptTerms: { required: true },
-    registration: { required: true },
-    trustDeed: { required: true }
-  }
-}
-
-// Error handling methods
-const clearError = () => {
-  error.value = null
-  validationErrors.value = []
-}
-
-const clearFieldError = (fieldName) => {
-  if (fieldErrors[fieldName]) {
-    delete fieldErrors[fieldName]
-  }
-}
-
-const clearAllFieldErrors = () => {
-  Object.keys(fieldErrors).forEach(key => {
-    delete fieldErrors[key]
-  })
-}
-
-const setFieldError = (fieldName, message) => {
-  fieldErrors[fieldName] = message
-}
-
-const validateField = (fieldName, value, rules) => {
-  clearFieldError(fieldName)
-  
-  if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
-    setFieldError(fieldName, `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} is required`)
-    return false
-  }
-  
-  if (value && rules.minLength && value.length < rules.minLength) {
-    setFieldError(fieldName, `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} must be at least ${rules.minLength} characters`)
-    return false
-  }
-  
-  if (value && rules.maxLength && value.length > rules.maxLength) {
-    setFieldError(fieldName, `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} must not exceed ${rules.maxLength} characters`)
-    return false
-  }
-  
-  if (value && rules.min && parseInt(value) < rules.min) {
-    setFieldError(fieldName, `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} must be at least ${rules.min}`)
-    return false
-  }
-  
-  if (value && rules.max && parseInt(value) > rules.max) {
-    setFieldError(fieldName, `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} must not exceed ${rules.max}`)
-    return false
-  }
-  
-  if (value && rules.pattern && !rules.pattern.test(value)) {
-    let message = `${fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} format is invalid`
-    if (fieldName === 'email') message = 'Please enter a valid email address'
-    if (fieldName === 'phone') message = 'Please enter a valid phone number'
-    if (fieldName === 'pincode') message = 'PIN code must be exactly 6 digits'
-    setFieldError(fieldName, message)
-    return false
-  }
-  
-  return true
-}
-
-const validateStep = (step) => {
-  clearAllFieldErrors()
-  let isValid = true
-  let stepRules = {}
-  
-  switch (step) {
-    case 1:
-      stepRules = validationRules.step1
-      break
-    case 2:
-      stepRules = validationRules.step2
-      break
-    case 3:
-      stepRules = validationRules.step3
-      break
-  }
-  
-  // Validate regular fields
-  Object.keys(stepRules).forEach(fieldName => {
-    if (fieldName === 'registration' || fieldName === 'trustDeed' || fieldName === 'acceptTerms') return
-    
-    const fieldValue = form[fieldName]
-    const fieldRules = stepRules[fieldName]
-    
-    if (!validateField(fieldName, fieldValue, fieldRules)) {
-      isValid = false
-    }
-  })
-  
-  // Special validation for step 3
-  if (step === 3) {
-    if (!form.documents.registration) {
-      setFieldError('registration', 'Registration certificate is required')
-      isValid = false
-    }
-    
-    if (!form.documents.trustDeed) {
-      setFieldError('trustDeed', 'Trust deed document is required')
-      isValid = false
-    }
-    
-    if (!form.acceptTerms) {
-      setFieldError('acceptTerms', 'You must accept the terms and conditions')
-      isValid = false
-    }
-  }
-  
-  return isValid
-}
-
 // Methods
 const nextStep = () => {
-  if (validateStep(currentStep.value)) {
+  if (validateCurrentStep()) {
     currentStep.value++
-    clearError()
-  } else {
-    error.value = 'Please fix the errors below before proceeding'
-    // Scroll to top to show error
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
 const previousStep = () => {
   currentStep.value--
-  clearError()
-  clearAllFieldErrors()
 }
 
 const validateCurrentStep = () => {
-  return validateStep(currentStep.value)
+  if (currentStep.value === 1) {
+    // Check for all required fields in step 1
+    const requiredFields = ['name', 'main_deity', 'temple_type', 'phone', 'email', 'established_year']
+    const missingFields = requiredFields.filter(field => !form[field])
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`)
+      return false
+    }
+    
+    // Validate establishedYear as a number
+    if (form.established_year && isNaN(parseInt(form.established_year))) {
+      toast.error('Established Year must be a valid number')
+      return false
+    }
+    
+    // Validate phone number format
+    if (form.phone && !/^[0-9]{10}$/.test(form.phone.replace(/[^0-9]/g, ''))) {
+      toast.error('Please enter a valid 10-digit phone number')
+      return false
+    }
+    
+    // Validate email format
+    if (form.email && !validators.email(form.email)) {
+      toast.error('Please enter a valid email address')
+      return false
+    }
+  } else if (currentStep.value === 2) {
+    const requiredFields = ['street_address', 'city', 'state', 'district', 'pincode']
+    const missingFields = requiredFields.filter(field => !form[field])
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in all required address fields: ${missingFields.join(', ')}`)
+      return false
+    }
+    
+    // Specifically validate street address is not empty
+    if (!form.street_address || form.street_address.trim() === '') {
+      toast.error('Street address is required')
+      return false
+    }
+    
+    // Validate PIN code format
+    if (form.pincode && !/^\d{6}$/.test(form.pincode)) {
+      toast.error('PIN Code must be a 6-digit number')
+      return false
+    }
+  }
+  
+  return true
 }
 
 const handleFileUpload = (event, type) => {
   const files = Array.from(event.target.files)
-  
-  if (!files.length) return
-  
-  // Clear any existing file errors for this type
-  clearFieldError(type)
-  
-  // Validate file size (max 5MB per file)
-  const maxSize = 5 * 1024 * 1024 // 5MB
-  for (const file of files) {
-    if (file.size > maxSize) {
-      setFieldError(type, `File ${file.name} is too large. Maximum size is 5MB.`)
-      return
-    }
-  }
-  
-  // Validate file types
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
-  for (const file of files) {
-    if (!allowedTypes.includes(file.type)) {
-      setFieldError(type, `File ${file.name} is not a supported format. Please use PDF, JPG, or PNG.`)
-      return
-    }
-  }
   
   if (type === 'additional') {
     form.documents.additional = files
@@ -799,46 +583,15 @@ const handleFileUpload = (event, type) => {
   }
 }
 
-const parseServerErrors = (errorData) => {
-  validationErrors.value = []
-  
-  if (errorData.errors && Array.isArray(errorData.errors)) {
-    // Handle array of error objects
-    errorData.errors.forEach(err => {
-      if (err.field && err.message) {
-        setFieldError(err.field, err.message)
-        validationErrors.value.push(`${err.field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${err.message}`)
-      } else if (typeof err === 'string') {
-        validationErrors.value.push(err)
-      }
-    })
-  } else if (errorData.errors && typeof errorData.errors === 'object') {
-    // Handle object with field keys
-    Object.keys(errorData.errors).forEach(field => {
-      const fieldError = errorData.errors[field]
-      const message = Array.isArray(fieldError) ? fieldError[0] : fieldError
-      setFieldError(field, message)
-      validationErrors.value.push(`${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${message}`)
-    })
-  } else if (errorData.message) {
-    validationErrors.value.push(errorData.message)
-  } else if (typeof errorData === 'string') {
-    validationErrors.value.push(errorData)
-  }
-}
-
 const handleSubmit = async () => {
-  if (!validateCurrentStep()) {
-    error.value = 'Please fix the errors below before submitting'
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-    return
-  }
+  if (!validateCurrentStep()) return
 
   try {
     isSubmitting.value = true
-    clearError()
-    clearAllFieldErrors()
 
+    // CRITICAL CHANGE: We'll now directly create the payload and call the API without going through the temple service
+    // This will help us ensure exactly what data is being sent
+    
     console.log('🔍 FORM DATA AT SUBMISSION:')
     console.log('Street address value:', form.street_address)
     console.log('Main deity value:', form.main_deity)
@@ -846,37 +599,26 @@ const handleSubmit = async () => {
 
     // Create the exact payload that matches the backend fields
     const payload = {
-      name: form.name?.trim() || "",
-      main_deity: form.main_deity?.trim() || "",
+      name: form.name || "",
+      main_deity: form.main_deity || "",
       temple_type: form.temple_type || "",
-      established_year: parseInt(form.established_year) || 0,
+      established_year: parseInt(form.established_year || 0),
       phone: form.phone ? form.phone.replace(/[^0-9]/g, '') : "",
-      email: form.email?.trim() || "",
-      description: form.description?.trim() || '',
-      street_address: form.street_address?.trim() || '',
-      city: form.city?.trim() || "",
-      district: form.district?.trim() || "",
+      email: form.email || "",
+      description: form.description || '',
+      street_address: form.street_address || '', // CRITICAL field we're having issues with
+      city: form.city || "",
+      district: form.district || "",
       state: form.state || "",
-      pincode: form.pincode?.trim() || "",
-      landmark: form.landmark?.trim() || '',
-      map_link: form.map_link?.trim() || '',
-      accepted_terms: form.acceptTerms,
+      pincode: form.pincode || "",
+      landmark: form.landmark || '',
+      map_link: form.map_link || '',
+      accepted_terms: true,
       status: 'pending'
     }
 
-    console.log('📦 Final payload being sent:', payload)
-
-    // Validate payload one more time before sending
-    const requiredFields = ['name', 'main_deity', 'temple_type', 'phone', 'email', 'street_address', 'city', 'state', 'district', 'pincode']
-    const missingFields = requiredFields.filter(field => !payload[field])
-    
-    if (missingFields.length > 0) {
-      error.value = `Missing required fields: ${missingFields.join(', ')}`
-      missingFields.forEach(field => {
-        setFieldError(field, 'This field is required')
-      })
-      return
-    }
+    console.log('📦 Final direct payload:', payload)
+    console.log('🧪 Checking street_address once more:', payload.street_address)
 
     // Make a direct API call to create the temple
     const response = await api.post('/v1/entities', payload)
@@ -886,40 +628,10 @@ const handleSubmit = async () => {
     toast.success('Temple registration submitted successfully!')
     router.push('/tenant/dashboard')
   } catch (err) {
+    error.value = err.response?.data?.error || 'Failed to submit temple registration. Please try again.'
+    toast.error(error.value)
     console.error('Temple registration failed:', err)
-    
-    if (err.response?.data) {
-      console.error('Error response data:', err.response.data)
-      parseServerErrors(err.response.data)
-      error.value = err.response.data.message || 'Temple registration failed. Please check the errors below and try again.'
-    } else if (err.response?.status) {
-      switch (err.response.status) {
-        case 400:
-          error.value = 'Invalid data provided. Please check your inputs and try again.'
-          break
-        case 401:
-          error.value = 'You are not authorized to perform this action. Please login again.'
-          break
-        case 403:
-          error.value = 'You do not have permission to register temples.'
-          break
-        case 422:
-          error.value = 'Validation failed. Please check the highlighted fields.'
-          break
-        case 500:
-          error.value = 'Server error occurred. Please try again later or contact support.'
-          break
-        default:
-          error.value = `Registration failed with error ${err.response.status}. Please try again.`
-      }
-    } else if (err.message) {
-      error.value = `Network error: ${err.message}`
-    } else {
-      error.value = 'An unexpected error occurred. Please try again.'
-    }
-    
-    // Scroll to top to show error
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    console.error('Error details:', err.response?.data || err.message)
   } finally {
     isSubmitting.value = false
   }

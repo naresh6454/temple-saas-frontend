@@ -470,62 +470,54 @@ const formatDate = (dateString) => {
 };
 
 const buildReportParams = () => {
-  // CRITICAL FIX: Properly detect if user is a superadmin
-  // Check both the route and user role to ensure correct detection
-  const isSuperAdmin = 
-    userStore.user?.roleId === 1 || 
-    userStore.user?.role === 'superadmin' || 
-    fromSuperadmin.value || 
-    route.path.includes('/superadmin/');
+  // CRITICAL FIX: Always prioritize assigned tenant ID from JWT for standard users
+  const assignedTenantId = localStorage.getItem('assigned_tenant_id');
+  const isStandardUser = 
+    userStore.user?.roleId === 5 || 
+    userStore.user?.role === 'standarduser' || 
+    userStore.user?.role === 'standard_user';
+  const isMonitoringUser = 
+    userStore.user?.roleId === 6 || 
+    userStore.user?.role === 'monitoringuser' || 
+    userStore.user?.role === 'monitoring_user';
 
-  console.log(`🔑 User role detection: roleId=${userStore.user?.roleId}, isSuperAdmin=${isSuperAdmin}, fromSuperadmin=${fromSuperadmin.value}`);
-  
-  // Multi-tenant superadmin case
-  if (isSuperAdmin && tenantIds.value.length > 1) {
-    const params = {
-      entityIds: tenantIds.value,
-      dateRange: activeFilter.value,
-      format: selectedFormat.value,
-      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value,
-      isSuperAdmin: true // Explicitly set to true for superadmin
-    };
-
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
-    if (activeFilter.value === 'custom') {
-      params.startDate = startDate.value;
-      params.endDate = endDate.value;
-    }
-
-    return params;
-  } 
-  // Single tenant case (could be either superadmin or tenant)
-  else {
-    const params = {
-      entityId: tenantId.value,
-      dateRange: activeFilter.value,
-      format: selectedFormat.value,
-      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value,
-      isSuperAdmin: isSuperAdmin // Set based on detection
-    };
-
-    // Add status filter if not 'all'
-    if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
-    }
-
-    // Add custom date range
-    if (activeFilter.value === 'custom') {
-      params.startDate = startDate.value;
-      params.endDate = endDate.value;
-    }
-
-    return params;
+  // For standard/monitoring users, always use assigned tenant ID from token
+  let effectiveTenantId;
+  if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
+    console.log(`⚠️ OVERRIDE: Using assigned tenant ID ${assignedTenantId} instead of ${tenantId.value}`);
+    effectiveTenantId = assignedTenantId;
+  } else {
+    effectiveTenantId = tenantId.value;
   }
+
+  // Continue with the regular parameter building...
+  const params = {
+    entityId: effectiveTenantId,
+    dateRange: activeFilter.value,
+    format: selectedFormat.value,
+    templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value,
+    isSuperAdmin: false
+  };
+
+  // Add status filter if not 'all'
+  if (activeStatus.value !== 'all') {
+    params.status = activeStatus.value;
+  }
+
+  // Add custom date range
+  if (activeFilter.value === 'custom') {
+    params.startDate = startDate.value;
+    params.endDate = endDate.value;
+  }
+
+  // CRITICAL: For standard users, force the tenant ID in headers
+  if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
+    params.headers = {
+      'X-Tenant-ID': assignedTenantId
+    };
+  }
+
+  return params;
 };
 
 const downloadReport = async () => {
@@ -535,40 +527,59 @@ const downloadReport = async () => {
   isDownloading.value = true;
 
   try {
-    const params = buildReportParams();
-    
-    // Validate parameters
-    const validation = ReportsService.validateReportParams({
-      ...params,
-      type: 'temple-registered'
-    });
+    // CRITICAL FIX: Always use assigned tenant ID from token for standard users
+    const assignedTenantId = localStorage.getItem('assigned_tenant_id');
+    const isStandardUser = 
+      userStore.user?.roleId === 5 || 
+      userStore.user?.role === 'standarduser' || 
+      userStore.user?.role === 'standard_user';
+    const isMonitoringUser = 
+      userStore.user?.roleId === 6 || 
+      userStore.user?.role === 'monitoringuser' || 
+      userStore.user?.role === 'monitoring_user';
 
-    if (!validation.isValid) {
-      throw new Error(validation.errors.join(', '));
+    // For standard/monitoring users, always use assigned tenant ID from token
+    let effectiveTenantId = tenantId.value;
+    if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
+      console.log(`⚠️ OVERRIDE: Using assigned tenant ID ${assignedTenantId} for download`);
+      effectiveTenantId = assignedTenantId;
     }
 
-    // Debug logging
-    console.log('Download params:', JSON.stringify(params));
-    
-    // IMPORTANT: Explicitly ensure critical parameters are set
-    if (selectedTemple.value !== 'all') {
-      params.templeId = selectedTemple.value;
+    // Build params with the effective tenant ID
+    const params = {
+      entityId: effectiveTenantId,
+      dateRange: activeFilter.value,
+      format: selectedFormat.value,
+      templeId: selectedTemple.value,
+      isSuperAdmin: false
+    };
+
+    // Add status filter if not 'all'
+    if (activeStatus.value !== 'all') {
+      params.status = activeStatus.value;
     }
-    
-    // Ensure tenant ID is explicitly passed for tenant users
-    if (!fromSuperadmin.value) {
-      params.entityId = tenantId.value;
-      
-      // Force tenant ID into headers for the API call
+
+    // Add custom date range
+    if (activeFilter.value === 'custom') {
+      params.startDate = startDate.value;
+      params.endDate = endDate.value;
+    }
+
+    // CRITICAL: Force the headers to use assigned tenant ID
+    if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
       params.headers = {
-        'X-Tenant-ID': tenantId.value
+        'X-Tenant-ID': assignedTenantId
       };
     }
 
-    console.log('Final download params:', JSON.stringify(params));
+    // Important: Create immutable copy of params
+    const finalParams = Object.freeze({...params});
+    
+    // Debug logging - IMPORTANT: This should be AFTER all params are set
+    console.log('Final download params:', JSON.stringify(finalParams));
 
     // Call the service method
-    const result = await ReportsService.downloadTempleRegisteredReport(params);
+    const result = await ReportsService.downloadTempleRegisteredReport(finalParams);
     
     // Show success message
     showToast(`Report downloaded successfully: ${result.filename}`, 'success');
@@ -622,8 +633,25 @@ const deduplicateTemplesByID = (temples) => {
 };
 
 // Fetch temples for a specific tenant - UPDATED
+// Update the fetchTemplesForTenant function in TempleRegisterReport.vue
 const fetchTemplesForTenant = async (tenantId) => {
   try {
+    // Check for assigned tenant ID from JWT token first
+    const assignedTenantId = localStorage.getItem('assigned_tenant_id');
+    const isStandardUser = userStore.user?.roleId === 5 || 
+                           userStore.user?.role === 'standarduser' ||
+                           userStore.user?.role === 'standard_user';
+    const isMonitoringUser = userStore.user?.roleId === 6 || 
+                             userStore.user?.role === 'monitoringuser' ||
+                             userStore.user?.role === 'monitoring_user';
+    
+    // For standard/monitoring users, ALWAYS prioritize the assigned tenant ID from token
+    if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
+      console.log(`🔄 Standard/Monitoring user detected - using assigned tenant ID: ${assignedTenantId} instead of ${tenantId}`);
+      // Override the passed tenantId with the assigned one from token
+      tenantId = assignedTenantId;
+    }
+    
     console.log(`Fetching temples for tenant ID: ${tenantId}`);
     
     // Clear temple store before fetching
@@ -633,7 +661,7 @@ const fetchTemplesForTenant = async (tenantId) => {
       templeStore.temples = [];
     }
     
-    // CRITICAL: Force tenant ID in local storage temporarily to ensure proper API calls
+    // CRITICAL: Force tenant ID in local storage to ensure proper API calls
     const originalTenantId = localStorage.getItem('current_tenant_id');
     localStorage.setItem('current_tenant_id', tenantId);
     localStorage.setItem('X-Tenant-ID', tenantId);
@@ -665,14 +693,6 @@ const fetchTemplesForTenant = async (tenantId) => {
     
     console.log(`Fetched ${templeStore.temples.length} temples for tenant ${tenantId}`);
     
-    // Debug: Log detailed info about each temple
-    if (templeStore.temples.length > 0 && debugMode.value) {
-      templeStore.temples.forEach(temple => {
-        console.log(`Temple ID: ${temple.id}, Name: ${temple.name}, Status: ${temple.status}`);
-        console.log(`CreatedBy: ${temple.created_by || temple.createdBy}, TenantID: ${temple.tenant_id || temple.tenantId}`);
-      });
-    }
-    
     // Make a copy of the temples and add the source tenant ID
     const templesWithTenantId = templeStore.temples.map(temple => ({
       ...temple,
@@ -695,16 +715,37 @@ const fetchTemplesDirectly = async (tenantId) => {
     return [];
   }
   
+  // CRITICAL FIX: Check for assigned tenant ID from JWT token
+  const assignedTenantId = localStorage.getItem('assigned_tenant_id');
+  const isStandardUser = 
+    userStore.user?.roleId === 5 || 
+    userStore.user?.role === 'standarduser' || 
+    userStore.user?.role === 'standard_user';
+  const isMonitoringUser = 
+    userStore.user?.roleId === 6 || 
+    userStore.user?.role === 'monitoringuser' || 
+    userStore.user?.role === 'monitoring_user';
+  
+  // For standard/monitoring users, ALWAYS use the assigned tenant ID from token in headers
+  const effectiveHeaderTenantId = 
+    (isStandardUser || isMonitoringUser) && assignedTenantId 
+      ? assignedTenantId 
+      : tenantId;
+  
   try {
     // Prepare headers with tenant ID and authorization
     const headers = {
       'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      'X-Tenant-ID': tenantId
+      'X-Tenant-ID': effectiveHeaderTenantId
     };
+    
+    if (effectiveHeaderTenantId !== tenantId) {
+      console.log(`⚠️ OVERRIDE: Using header tenant ID ${effectiveHeaderTenantId} instead of ${tenantId}`);
+    }
     
     // API endpoint with query param for tenant filtering
     const url = `/v1/entities?tenant_id=${tenantId}&_=${Date.now()}`;
-    console.log(`📡 DIRECT API: Calling ${url}`);
+    console.log(`📡 DIRECT API: Calling ${url} with X-Tenant-ID: ${effectiveHeaderTenantId}`);
     
     // Make direct API call
     const response = await fetch(url, {
@@ -727,19 +768,10 @@ const fetchTemplesDirectly = async (tenantId) => {
     
     console.log(`🏛️ DIRECT API: Extracted ${temples.length} temples`);
     
-    // Filter by tenant ID to be safe
-    const filteredTemples = temples.filter(temple => {
-      const createdBy = String(temple.created_by || temple.createdBy || '');
-      const templeTenantId = String(temple.tenant_id || temple.tenantId || '');
-      return createdBy === tenantId || templeTenantId === tenantId;
-    });
-    
-    console.log(`🏛️ DIRECT API: After filtering ${filteredTemples.length} temples remain`);
-    
     // Update the store directly
-    templeStore.temples = filteredTemples;
+    templeStore.temples = temples;
     
-    return filteredTemples;
+    return temples;
   } catch (error) {
     console.error(`❌ DIRECT API: Error fetching temples:`, error);
     return [];
@@ -753,12 +785,32 @@ onMounted(async () => {
   
   console.log('🔍 Component mounted - trying direct API approach');
   
-  // Get tenant ID for API calls
-  const currentTenantId = tenantIds.value[0];
-  console.log(`Current tenant ID: ${currentTenantId}`);
+  // CRITICAL FIX: Always prioritize assigned tenant ID from JWT for standard users
+  const assignedTenantId = localStorage.getItem('assigned_tenant_id');
+  const isStandardUser = 
+    userStore.user?.roleId === 5 || 
+    userStore.user?.role === 'standarduser' || 
+    userStore.user?.role === 'standard_user';
+  const isMonitoringUser = 
+    userStore.user?.roleId === 6 || 
+    userStore.user?.role === 'monitoringuser' || 
+    userStore.user?.role === 'monitoring_user';
+  
+  // For standard/monitoring users, ALWAYS use the assigned tenant ID from token
+  let effectiveTenantId;
+  if ((isStandardUser || isMonitoringUser) && assignedTenantId) {
+    console.log(`⚠️ OVERRIDE: Standard user detected with token assigned tenant ID: ${assignedTenantId}`);
+    effectiveTenantId = assignedTenantId;
+    // Force the correct tenant ID in tenantIds
+    tenantIds.value = [assignedTenantId];
+  } else {
+    effectiveTenantId = tenantIds.value[0];
+  }
+  
+  console.log(`Current tenant ID: ${effectiveTenantId} (from token: ${assignedTenantId || 'none'})`);
   
   if (fromSuperadmin.value && tenantIds.value.length > 1) {
-    // Multiple tenants case (Superadmin)
+    // Multiple tenants case (Superadmin) - unchanged code...
     console.log(`Fetching temples for ${tenantIds.value.length} tenants: ${tenantIds.value.join(', ')}`);
     
     let collectedTemples = [];
@@ -767,28 +819,27 @@ onMounted(async () => {
       collectedTemples.push(...tenantTemples);
     }
     
-    // Deduplicate temples by ID
     allTemples.value = deduplicateTemplesByID(collectedTemples);
     console.log(`Final temple count for dropdown: ${filteredTemples.value.length}`);
   } 
   else {
-    // Single tenant case - Try direct API fetch first
+    // Single tenant case - USE EFFECTIVE TENANT ID
     try {
-      if (!currentTenantId) {
-        console.error("❌ No tenant ID available!");
+      if (!effectiveTenantId) {
+        console.error("❌ No effective tenant ID available!");
         errorMessage.value = "Could not determine your tenant ID. Please refresh or contact support.";
         return;
       }
       
-      console.log(`🔄 Single tenant mode - fetching temples for tenant ID: ${currentTenantId}`);
+      console.log(`🔄 Single tenant mode - fetching temples for tenant ID: ${effectiveTenantId}`);
       
-      // Make direct API call - bypass store
-      const directResult = await fetchTemplesDirectly(currentTenantId);
+      // Make direct API call with effective tenant ID
+      const directResult = await fetchTemplesDirectly(effectiveTenantId);
       
       // If direct fetch returned no results, try the store methods
       if (directResult.length === 0) {
         console.warn("⚠️ Direct fetch returned no temples. Trying store methods...");
-        await templeStore.fetchDirectByTenant(currentTenantId);
+        await templeStore.fetchDirectByTenant(effectiveTenantId);
       }
       
       console.log(`Final temple count after all attempts: ${filteredTemples.value.length}`);

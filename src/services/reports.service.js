@@ -559,77 +559,134 @@ async downloadUserDetailsReport(params) {
   }
 
   // TEMPLE REGISTERED METHODS
-  async getTempleRegisteredReport(params) {
-    const { entityId, entityIds, status, dateRange = 'weekly', startDate, endDate, isSuperAdmin } = params
+async downloadTempleRegisteredReport(params) {
+  const { entityId, entityIds, templeId, status, dateRange = 'weekly', startDate, endDate, format, isSuperAdmin } = params;
 
-    if (!entityId && !entityIds) {
-      throw new Error('Entity ID or Entity IDs are required')
-    }
-
-    const queryParams = new URLSearchParams({
-      date_range: dateRange,
-    })
-
-    if (status) {
-      queryParams.append('status', status)
-    }
-
-    if (dateRange === 'custom' && startDate && endDate) {
-      queryParams.append('start_date', startDate)
-      queryParams.append('end_date', endDate)
-    }
-
-    let url;
-    let response;
-    
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
-      try {
-        // First try with superadmin/tenants endpoint
-        if (entityIds && entityIds.length > 1) {
-          url = `/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
-        } else {
-          url = `/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}`
-        }
-        
-        console.log('Making primary API request:', url)
-        response = await api.get(url)
-      } catch (error) {
-        console.log('Primary API endpoint failed, trying fallback:', error.message)
-        
-        // Fallback to alternative superadmin endpoint structure
-        try {
-          if (entityIds && entityIds.length > 1) {
-            url = `/v1/superadmin/temple-registered/report?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/v1/superadmin/temple-registered/report?${queryParams}&tenant_id=${entityId}`
-          }
-          
-          console.log('Making fallback API request:', url)
-          response = await api.get(url)
-        } catch (error2) {
-          console.log('Second fallback failed, trying third pattern:', error2.message)
-          
-          // Try one more pattern
-          if (entityIds && entityIds.length > 1) {
-            url = `/v1/superadmin/entities/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
-          }
-          
-          console.log('Making third fallback API request:', url)
-          response = await api.get(url)
-        }
-      }
-    } else {
-      // Regular entity endpoint
-      url = `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
-      console.log('Making API request:', url)
-      response = await api.get(url)
-    }
-    
-    return response
+  if ((!entityId && !entityIds) || !format) {
+    throw new Error('Entity ID (or IDs) and format are required');
   }
+
+  console.log('🔍 Temple Register Report Params:', { 
+    entityId, 
+    entityIds, 
+    templeId,
+    isSuperAdmin,
+    format
+  });
+
+  const queryParams = new URLSearchParams({
+    date_range: dateRange,
+    format
+  });
+
+  if (status) {
+    queryParams.append('status', status);
+  }
+
+  if (dateRange === 'custom' && startDate && endDate) {
+    queryParams.append('start_date', startDate);
+    queryParams.append('end_date', endDate);
+  }
+
+  // Standard auth headers - needed for all requests
+  const headers = {
+    'Accept': this.getAcceptHeader(format),
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+    'Cache-Control': 'no-cache'
+  };
+
+  // CRITICAL FIX: Always use headers from params when available
+  if (params.headers && params.headers['X-Tenant-ID']) {
+    headers['X-Tenant-ID'] = params.headers['X-Tenant-ID'];
+    console.log(`🔑 Using tenant ID from params headers: ${params.headers['X-Tenant-ID']}`);
+  } 
+  // Fallback options if no headers in params
+  else if (!isSuperAdmin && entityId) {
+    headers['X-Tenant-ID'] = entityId.toString();
+  } else if (isSuperAdmin && entityIds && entityIds.length > 0) {
+    headers['X-Tenant-ID'] = entityIds[0].toString();
+  } else if (isSuperAdmin && entityId) {
+    headers['X-Tenant-ID'] = entityId.toString();
+  }
+  
+  // Log headers for debugging
+  console.log('🔑 Using headers:', JSON.stringify(headers));
+
+  // Define URLs to try with correct path for "all" temples
+  const urlsToTry = [];
+  
+  if (templeId === 'all') {
+    // Try all these endpoints for the "all" case
+    urlsToTry.push(
+      `/api/v1/entities/all/reports/temple-registered?${queryParams}`,
+      `/api/v1/reports/temple-registered?${queryParams}&all=true`,
+      `/api/v1/reports/temples?${queryParams}&all=true`
+    );
+  } else {
+    // For specific temple
+    urlsToTry.push(
+      `/api/v1/entities/${templeId}/reports/temple-registered?${queryParams}`,
+      `/api/v1/reports/temple-registered?${queryParams}&entity_id=${templeId}`,
+      `/api/v1/reports/temples?${queryParams}&entity_id=${templeId}`
+    );
+  }
+  
+  // Common fallbacks as last resort
+  urlsToTry.push(
+    `/api/v1/entities/all/reports/temple-registered?${queryParams}`
+  );
+  
+  console.log('🔄 URLs to try:', urlsToTry);
+  
+  // Try each URL until one succeeds
+  let response = null;
+  let successUrl = '';
+  
+  for (let i = 0; i < urlsToTry.length; i++) {
+    const url = urlsToTry[i];
+    console.log(`🔄 Attempt ${i+1}/${urlsToTry.length}: ${url}`);
+    
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (response.ok) {
+        console.log(`✅ Success with URL: ${url}`);
+        successUrl = url;
+        break;
+      } else {
+        const errorText = await response.text().catch(() => 'Unable to get error text');
+        console.log(`❌ URL failed with status ${response.status}: ${errorText}`);
+      }
+    } catch (error) {
+      console.log(`❌ Error with URL: ${error.message}`);
+    }
+  }
+
+  if (!response || !response.ok) {
+    throw new Error('All attempts to download temple registered report failed');
+  }
+
+  // Convert response to blob for download
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+
+  // Create a temporary link to trigger download
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = `temple_registered_report_${Date.now()}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Clean up object URL
+  window.URL.revokeObjectURL(downloadUrl);
+
+  return { success: true, url: successUrl };
+}
 
 // Fix for reports.service.js downloadTempleRegisteredReport method
 
@@ -1103,158 +1160,149 @@ async downloadTempleRegisteredReport(params) {
       throw error
     }
   }
+// DEVOTEE LIST METHODS
+async getDevoteeList(params) {
+  const { entityId, entityIds, status = 'all', isSuperAdmin } = params;
 
-  // DEVOTEE LIST METHODS
-  async getDevoteeList(params) {
-    const { entityId, entityIds, status = 'all', isSuperAdmin } = params
-
-    if (!entityId && !entityIds) {
-      throw new Error('Entity ID or Entity IDs are required')
-    }
-
-    const allowedStatuses = ['all', 'active', 'inactive']
-    if (!allowedStatuses.includes(status)) {
-      throw new Error(`Invalid status. Allowed values: ${allowedStatuses.join(', ')}`)
-    }
-
-    const queryParams = new URLSearchParams()
-    if (status !== 'all') {
-      queryParams.append('status', status)
-    }
-
-    let url;
-    let response;
-    
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
-      try {
-        // First try with superadmin/tenants endpoint
-        if (entityIds && entityIds.length > 1) {
-          url = `/v1/superadmin/reports/devotee-list?${queryParams}&tenants=${entityIds.join(',')}`
-        } else {
-          url = `/v1/superadmin/tenants/${entityId}/reports/devotee-list?${queryParams}`
-        }
-        
-        console.log('📋 Making primary devotee list API request:', url)
-        response = await api.get(url)
-      } catch (error) {
-        console.log('Primary API endpoint failed, trying fallback:', error.message)
-        
-        // Fallback to alternative superadmin endpoint structure
-        try {
-          if (entityIds && entityIds.length > 1) {
-            url = `/v1/superadmin/devotee-list/report?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/v1/superadmin/devotee-list/report?${queryParams}&tenant_id=${entityId}`
-          }
-          
-          console.log('📋 Making fallback devotee list API request:', url)
-          response = await api.get(url)
-        } catch (error2) {
-          console.log('Second fallback failed, trying third pattern:', error2.message)
-          
-          // Try one more pattern
-          if (entityIds && entityIds.length > 1) {
-            url = `/v1/superadmin/entities/reports/devotees?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/v1/entities/${entityId}/reports/devotees?${queryParams}`
-          }
-          
-          console.log('📋 Making third fallback devotee list API request:', url)
-          response = await api.get(url)
-        }
-      }
-    } else {
-      // Regular entity endpoint
-      url = `/v1/entities/${entityId}/reports/devotee-list?${queryParams}`
-      console.log('📋 Making devotee list API request:', url)
-      response = await api.get(url)
-    }
-    
-    console.log('✅ Devotee list API Response received:', response)
-    return response
+  if (!entityId && (!entityIds || entityIds.length === 0)) {
+    throw new Error('Entity ID or Entity IDs are required');
   }
 
-  async downloadDevoteeListReport(params) {
-    const { entityId, entityIds, status = 'all', format, isSuperAdmin } = params
+  const allowedStatuses = ['all', 'active', 'inactive'];
+  if (!allowedStatuses.includes(status)) {
+    throw new Error(`Invalid status. Allowed values: ${allowedStatuses.join(', ')}`);
+  }
 
-    if ((!entityId && !entityIds) || !format) {
-      throw new Error('Entity ID (or IDs) and format are required')
-    }
+  const queryParams = new URLSearchParams();
+  if (status !== 'all') queryParams.append('status', status);
 
-    const queryParams = new URLSearchParams({ format })
-    if (status !== 'all') {
-      queryParams.append('status', status)
-    }
+  const buildUrl = (base) => {
+    const qp = new URLSearchParams(queryParams.toString());
+    if (entityIds && entityIds.length > 1) qp.append('tenants', entityIds.join(','));
+    else if (entityId) qp.append('tenant_id', entityId);
+    return `${base}?${qp.toString()}`;
+  };
 
-    let url;
-    
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
-      if (entityIds && entityIds.length > 1) {
-        url = `/v1/superadmin/reports/devotee-list?${queryParams}&tenants=${entityIds.join(',')}`
-      } else {
-        url = `/v1/superadmin/tenants/${entityId}/reports/devotee-list?${queryParams}`
-      }
-    } else {
-      url = `/v1/entities/${entityId}/reports/devotee-list?${queryParams}`
-    }
-    
+  const urlsToTry = [];
+  if (isSuperAdmin) {
+    urlsToTry.push(
+      entityIds && entityIds.length > 1
+        ? '/v1/superadmin/reports/devotee-list'
+        : `/v1/superadmin/tenants/${entityId}/reports/devotee-list`,
+      entityIds && entityIds.length > 1
+        ? '/v1/superadmin/devotee-list/report'
+        : '/v1/superadmin/devotee-list/report',
+      entityIds && entityIds.length > 1
+        ? '/v1/superadmin/entities/reports/devotees'
+        : `/v1/entities/${entityId}/reports/devotees`
+    );
+  } else {
+    urlsToTry.push(`/v1/entities/${entityId}/reports/devotee-list`);
+  }
+
+  let response = null;
+  for (const baseUrl of urlsToTry) {
     try {
-      return await this.downloadReport(url, { format }, `devotee_list_${status}_report`, async () => {
-        // Fallback function for alternative URLs if the first one fails
-        if (isSuperAdmin) {
-          // Try alternative patterns
-          const alternatives = [
-            entityIds && entityIds.length > 1 
-              ? `/v1/superadmin/devotee-list/report?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/v1/superadmin/devotee-list/report?${queryParams}&tenant_id=${entityId}`,
-            
-            entityIds && entityIds.length > 1
-              ? `/v1/superadmin/entities/reports/devotees?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/v1/entities/${entityId}/reports/devotees?${queryParams}`
-          ];
-          
-          return alternatives;
-        }
-        return null; // No alternatives for regular users
-      });
-    } catch (error) {
-      console.error('Error downloading devotee list report:', error)
-      throw error
+      const url = buildUrl(baseUrl);
+      console.log('📋 Trying Devotee List API:', url);
+      response = await api.get(url);
+      if (response?.data) break; // Success
+    } catch (err) {
+      console.warn('API call failed for', baseUrl, err.message);
     }
   }
 
-  async getDevoteeListPreview(params) {
+  if (!response) {
+    console.error('All Devotee List API endpoints failed');
+    return { data: [] }; // Ensure frontend always gets an array
+  }
+
+  // Normalize data to always return an array
+  let data = response.data;
+  if (data?.data) data = data.data;
+  if (!data) data = [];
+  if (!Array.isArray(data)) data = data.devotees || data.data || [];
+
+  response.data = Array.isArray(data) ? data : [];
+  console.log('✅ Normalized Devotee List Response:', response.data);
+
+  return response;
+}
+
+async downloadDevoteeListReport(params) {
+  const { format } = params;
+  if (!format) throw new Error('Format is required for download');
+
+  if (params.entityIds && Array.isArray(params.entityIds) && params.entityIds.length > 0) {
+    params.isSuperAdmin = true;
+  }
+
+  const queryParams = new URLSearchParams({ format });
+  if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+
+  const buildUrl = (base) => {
+    const qp = new URLSearchParams(queryParams.toString());
+    if (params.entityIds && params.entityIds.length > 1) qp.append('tenants', params.entityIds.join(','));
+    else if (params.entityId) qp.append('tenant_id', params.entityId);
+    return `${base}?${qp.toString()}`;
+  };
+
+  const urlsToTry = [];
+  if (params.isSuperAdmin) {
+    urlsToTry.push(
+      params.entityIds && params.entityIds.length > 1
+        ? '/v1/superadmin/reports/devotee-list'
+        : `/v1/superadmin/tenants/${params.entityId}/reports/devotee-list`,
+      params.entityIds && params.entityIds.length > 1
+        ? '/v1/superadmin/devotee-list/report'
+        : '/v1/superadmin/devotee-list/report',
+      params.entityIds && params.entityIds.length > 1
+        ? '/v1/superadmin/entities/reports/devotees'
+        : `/v1/entities/${params.entityId}/reports/devotees`
+    );
+  } else {
+    urlsToTry.push(`/v1/entities/${params.entityId}/reports/devotee-list`);
+  }
+
+  for (const baseUrl of urlsToTry) {
     try {
-      const response = await this.getDevoteeList(params)
-
-      let responseData = response.data
-      if (responseData && responseData.data) {
-        responseData = responseData.data
-      }
-
-      const previewData = responseData.devotees || responseData || []
-
-      const columns = [
-        { key: 'full_name', label: 'Full Name' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'email', label: 'Email' },
-        { key: 'status', label: 'Status' },
-        { key: 'registration_date', label: 'Registration Date' },
-        { key: 'last_login', label: 'Last Login' }
-      ]
-
-      return {
-        data: previewData,
-        columns,
-        totalRecords: previewData.length || 0
-      }
-    } catch (error) {
-      console.error('Error getting devotee list preview:', error)
-      throw error
+      const url = buildUrl(baseUrl);
+      console.log('📋 Trying Devotee List Download API:', url);
+      return await this.downloadReport(url, { format }, `devotee_list_${params.status}_report`);
+    } catch (err) {
+      console.warn('Download attempt failed for', baseUrl, err.message);
     }
   }
+
+  throw new Error('All download attempts for devotee list failed');
+}
+
+async getDevoteeListPreview(params) {
+  try {
+    const response = await this.getDevoteeList(params);
+    let data = response.data || [];
+    if (!Array.isArray(data)) data = data.devotees || [];
+
+    const columns = [
+      { key: 'full_name', label: 'Full Name' },
+      { key: 'phone', label: 'Phone' },
+      { key: 'email', label: 'Email' },
+      { key: 'status', label: 'Status' },
+      { key: 'registration_date', label: 'Registration Date' },
+      { key: 'last_login', label: 'Last Login' }
+    ];
+
+    return {
+      data,
+      columns,
+      totalRecords: data.length
+    };
+  } catch (err) {
+    console.error('Error getting devotee list preview:', err);
+    return { data: [], columns: [], totalRecords: 0 };
+  }
+}
+
 
   // DEVOTEE PROFILE METHODS
   async getDevoteeProfile(params) {

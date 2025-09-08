@@ -866,6 +866,7 @@ export default {
     
     // ==================== MODAL HANDLERS ====================
     
+    
     const handleViewDetails = (tenant) => {
       selectedTenant.value = tenant;
       
